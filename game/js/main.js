@@ -297,6 +297,11 @@ const params = new URLSearchParams(window.location.search);
 if (params.has('shot')) {
   game.frozen = true;
   runShotScene(game, params.get('shot'), Number(params.get('seed') ?? 7), { setMode, drawFrame, startRun });
+  if (params.has('live')) {
+    game.frozen = false;
+    last = performance.now();
+    requestAnimationFrame(frame);
+  }
 } else {
   announce(`Prism Warden. ${LIGHTS.map((light) => light.name).join(', ')}. Click to begin.`);
   requestAnimationFrame(frame);

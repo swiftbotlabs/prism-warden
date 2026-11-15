@@ -12,7 +12,7 @@ const SHOT_PICKS = ['prism', 'reflect', 'lens', 'focus', 'chain', 'bastion', 'la
 const MAX_SECONDS = 60 * 12;
 
 /**
- * Plays a run with the autopilot until `stop(world)` says so (checked once a step), taking upgrades on the way.
+ * Plays a run with the autopilot until `stop(world, step)` says so (checked once a step), taking upgrades on the way.
  * Returns the world, or null if the run ended or ran out of time first.
  */
 function playUntil(seed, stop, picks = SHOT_PICKS) {
@@ -20,7 +20,7 @@ function playUntil(seed, stop, picks = SHOT_PICKS) {
   const pilot = createPilot(0);
   for (let step = 0; step < MAX_SECONDS / STEP; step += 1) {
     if (world.state === 'cleared' && world.stateTime > 1.3) {
-      if (stop(world)) return world;
+      if (stop(world, step)) return world;
       const hand = dealUpgradeCards(world.upgrades, simRandom, world.core.hp / world.core.maxHp);
       const preferred = picks.find((id) => hand.includes(id));
       applyUpgrade(world, preferred ?? hand[autopilotPick(hand, world.upgrades)]);
@@ -29,22 +29,42 @@ function playUntil(seed, stop, picks = SHOT_PICKS) {
     stepWorld(world, autopilotControls(world, pilot, STEP), STEP);
     world.events.length = 0;
     updateEffects(STEP);
-    if (stop(world)) return world;
+    if (stop(world, step)) return world;
     if (world.state === 'lost' && world.stateTime > 2.5) return null;
   }
   return null;
 }
 
-/** A busy, readable mid-run frame: wave 7+, many Shades of several kinds, split and bounced beams, a live combo. */
-function isDramatic(world) {
-  if (world.wave < 7 || world.state !== 'fight' || world.banner) return false;
-  const onScreen = world.shades.filter((s) => !s.dead && s.x > 20 && s.x < 1260 && s.y > 110 && s.y < 720);
-  const kinds = new Set(onScreen.map((s) => s.kind));
-  const bounces = world.beams.reduce((sum, beam) => sum + beam.bounces.length / 2, 0);
+/**
+ * How striking a mid-run frame is: many Shades of several kinds on screen, split and bounced beams, a live combo,
+ * particles. Frames that would hide the HUD story (a banner, a hurt Core, the Warden under a panel) score -1.
+ */
+function dramaScore(world) {
+  if (world.wave !== 7 || world.state !== 'fight' || world.banner) return -1;
   const warden = world.warden;
-  return onScreen.length >= 13 && kinds.size >= 4 && world.beams.length >= 3 && bounces >= 2
-    && world.combo >= 8 && world.core.hp >= world.core.maxHp * 0.6 && liveParticleCount() > 120
-    && warden.y > 150 && warden.y < 690;
+  if (world.core.hp < world.core.maxHp * 0.6 || warden.y < 150 || warden.y > 680 || world.beams.length < 3) return -1;
+  const onScreen = world.shades.filter((s) => !s.dead && s.x > 20 && s.x < 1260 && s.y > 110 && s.y < 720);
+  const kinds = new Set(onScreen.map((s) => s.kind)).size;
+  const bounces = world.beams.reduce((sum, beam) => sum + beam.bounces.length / 2, 0);
+  const hits = world.beams.reduce((sum, beam) => sum + beam.hits.length, 0);
+  return onScreen.length + kinds * 3 + Math.min(bounces, 5) * 3 + hits * 2 + Math.min(world.combo, 40) / 2 + liveParticleCount() / 60;
+}
+
+/** Plays wave 7 once to find its most dramatic step, then replays the same seed to exactly that step. */
+function mostDramaticMoment(seed) {
+  let bestStep = -1;
+  let bestScore = 0;
+  playUntil(seed, (world, step) => {
+    const score = dramaScore(world);
+    if (score > bestScore) {
+      bestScore = score;
+      bestStep = step;
+    }
+    return world.wave > 7 || (world.wave === 7 && world.state === 'cleared');
+  });
+  if (bestStep < 0) return null;
+  clearEffects();
+  return playUntil(seed, (world, step) => step === bestStep);
 }
 
 /** Sets up scene `kind` from `seed`, draws it once and flags `window.__shotReady` for the capture script. */
@@ -65,7 +85,7 @@ export function runShotScene(game, kind, seed, hooks) {
         world = game.titleScene;
         break;
       case 'play':
-        world = playUntil(runSeed, isDramatic);
+        world = mostDramaticMoment(runSeed);
         if (world) {
           game.world = world;
           game.colour = world.warden.colour;

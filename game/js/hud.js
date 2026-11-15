@@ -107,7 +107,7 @@ function drawScorePanel(ctx, world, best) {
 
 /** The three lights as keyed chips; the selected one glows. */
 export function drawColourSelector(ctx, selected, time) {
-  const width = 132;
+  const width = 152;
   const gap = 10;
   const left = ARENA_W / 2 - (width * 3 + gap * 2) / 2;
   const y = ARENA_H - 62;
@@ -130,19 +130,19 @@ export function drawColourSelector(ctx, selected, time) {
 function drawUpgradeTray(ctx, levels) {
   const owned = UPGRADES.filter((upgrade) => levels[upgrade.id] > 0);
   if (owned.length === 0) return;
-  const size = 44;
-  const y = ARENA_H - 60;
-  drawPanel(ctx, 16, y - 6, 12 + owned.length * (size + 6), size + 12, 10);
+  const size = 40;
+  const y = ARENA_H - 58;
+  drawPanel(ctx, 16, y - 6, 12 + owned.length * (size + 4), size + 12, 10);
   owned.forEach((upgrade, index) => {
-    const x = 22 + index * (size + 6);
+    const x = 22 + index * (size + 4);
     ctx.beginPath();
     ctx.roundRect(x, y, size, size, 8);
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
     ctx.fill();
-    drawUpgradeIcon(ctx, upgrade.id, x + size / 2, y + size / 2 - 3, 32);
+    drawUpgradeIcon(ctx, upgrade.id, x + size / 2, y + size / 2 - 3, 30);
     for (let i = 0; i < levels[upgrade.id]; i += 1) {
       ctx.fillStyle = PALETTE.gold;
-      ctx.fillRect(x + 6 + i * 9, y + size - 7, 6, 3);
+      ctx.fillRect(x + 5 + i * 8, y + size - 7, 6, 3);
     }
   });
 }

@@ -96,6 +96,7 @@ export function drawWorld(ctx, world, time, showReticle = true) {
   }
   drawBackdrop(ctx);
   for (const mirror of world.mirrors) drawMirror(ctx, mirror, time);
+  if (world.state === 'won') drawVictoryRays(ctx, time, Math.min(1, world.stateTime / 1.5));
   drawCore(ctx, world.core, time, world.state === 'lost' ? world.stateTime : 0);
   drawMotes(ctx, world.motes);
   for (const shade of world.shades) {
@@ -116,6 +117,27 @@ export function drawWorld(ctx, world, time, showReticle = true) {
     ctx.fillStyle = edge;
     ctx.fillRect(0, 0, ARENA_W, ARENA_H);
   }
+}
+
+/** After THE ECLIPSE falls, the Core blazes: slow rotating rays in the three colours. */
+function drawVictoryRays(ctx, time, strength) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 18; i += 1) {
+    const angle = time * 0.15 + (i / 18) * TAU;
+    const rgb = LIGHTS[i % 3].rgb;
+    const ray = ctx.createLinearGradient(CORE_X, CORE_Y, CORE_X + Math.cos(angle) * 900, CORE_Y + Math.sin(angle) * 900);
+    ray.addColorStop(0, `rgba(${rgb},${(0.5 * strength).toFixed(2)})`);
+    ray.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.beginPath();
+    ctx.moveTo(CORE_X, CORE_Y);
+    ctx.arc(CORE_X, CORE_Y, 900, angle - 0.05, angle + 0.05);
+    ctx.closePath();
+    ctx.fillStyle = ray;
+    ctx.fill();
+  }
+  drawGlow(ctx, CORE_X, CORE_Y, 260, '255,240,200', 0.6 * strength);
+  ctx.restore();
 }
 
 function drawMirror(ctx, mirror, time) {

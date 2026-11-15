@@ -118,7 +118,7 @@ export function stepWorld(world, controls, dt) {
     world.stats.wavesCleared += 1;
     const bonus = 50 * world.wave;
     world.score += bonus;
-    floatText(CORE_X, CORE_Y - 70, `WAVE CLEAR +${bonus}`, '#ffd46e', 24, 1.6);
+    floatText(CORE_X, CORE_Y - 70, `WAVE CLEAR +${bonus}`, '#ffd46e', 24, 1.2);
     if (world.wave >= TOTAL_WAVES) endRun(world, 'won');
     else {
       world.state = 'cleared';

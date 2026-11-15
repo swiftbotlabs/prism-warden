@@ -59,7 +59,8 @@ export function createTitleScene() {
   return {
     time: 0,
     levels,
-    mirrors: [makeMirror(300, 330, 150, 1.1), makeMirror(990, 330, 150, -1.1), makeMirror(640, 640, 160, 0.05)],
+    mirrors: [makeMirror(470, 300, 130, 0.9), makeMirror(830, 300, 130, -0.9), makeMirror(560, 590, 120, -0.35), makeMirror(740, 590, 120, 0.35)]
+      .map((mirror) => ({ ...mirror, born: 1 })),
     shades,
     beams: [],
     motes: [],
@@ -77,8 +78,8 @@ export function updateTitleScene(scene, dt) {
   const t = scene.time;
   scene.shades.forEach((shade, index) => {
     const angle = t * 0.12 + (index / scene.shades.length) * TAU;
-    shade.x = CORE_X + Math.cos(angle) * 470;
-    shade.y = CORE_Y + 20 + Math.sin(angle) * 250;
+    shade.x = CORE_X + Math.cos(angle) * 225;
+    shade.y = CORE_Y + 25 + Math.sin(angle) * 165;
     shade.age = t + index;
     if (shade.kind === 'prismling') shade.colour = Math.floor(t / 2) % 3;
     if (shade.shell) shade.rot = t * 0.5;
@@ -174,7 +175,7 @@ export function cardAt(x, y, count = 3) {
 
 export function drawUpgradeChoice(ctx, world, hand, hovered, time) {
   drawWorld(ctx, world, time, false);
-  dim(ctx, 0.74);
+  dim(ctx, 0.62);
   text(ctx, `WAVE ${world.wave} CLEARED`, ARENA_W / 2, 92, 46, PALETTE.gold, 'center', 900);
   text(ctx, 'Choose one upgrade · press 1, 2, 3 or click a card', ARENA_W / 2, 142, 20, PALETTE.ink, 'center', 600);
 
@@ -218,14 +219,33 @@ export function drawUpgradeChoice(ctx, world, hand, hovered, time) {
   drawPanel(ctx, ARENA_W / 2 - 380, 612, 760, 52, 26);
   const core = world.core;
   text(ctx, `CORE ${Math.ceil(core.hp)}/${core.maxHp}   ·   SCORE ${world.score.toLocaleString('en-US')}   ·   NEXT: WAVE ${world.wave + 1} · ${next.title}`, ARENA_W / 2, 638, 18, PALETTE.ink, 'center', 700);
+  drawBuild(ctx, world.upgrades, ARENA_W / 2, 712, 'YOUR BUILD');
+}
+
+/** The upgrades a run owns, as a centred row of icons with level pips. */
+function drawBuild(ctx, levels, cx, y, label) {
+  const owned = UPGRADES.filter((upgrade) => levels[upgrade.id] > 0);
+  if (owned.length === 0) return;
+  const step = 58;
+  const left = cx - ((owned.length - 1) * step) / 2;
+  text(ctx, label, left - 52, y, 14, PALETTE.dim, 'right', 800);
+  owned.forEach((upgrade, index) => {
+    const x = left + index * step;
+    drawPanel(ctx, x - 24, y - 24, 48, 48, 10, 'rgba(255,255,255,0.06)', 'rgba(160,150,255,0.3)');
+    drawUpgradeIcon(ctx, upgrade.id, x, y - 3, 34);
+    for (let i = 0; i < levels[upgrade.id]; i += 1) {
+      ctx.fillStyle = PALETTE.gold;
+      ctx.fillRect(x - 17 + i * 9, y + 16, 6, 3);
+    }
+  });
 }
 
 // ----- Results ------------------------------------------------------------------------------------------------
 
 export function drawResults(ctx, world, best, isNewBest, time) {
   drawWorld(ctx, world, time, false);
-  dim(ctx, 0.7);
   const won = world.state === 'won';
+  dim(ctx, won ? 0.5 : 0.66);
   ctx.save();
   ctx.shadowColor = won ? 'rgba(255,212,110,0.9)' : 'rgba(255,84,104,0.9)';
   ctx.shadowBlur = 34;
@@ -234,7 +254,7 @@ export function drawResults(ctx, world, best, isNewBest, time) {
   text(ctx, won ? 'THE ECLIPSE is broken. The Core holds.' : `The Shades broke through on wave ${world.wave}.`, ARENA_W / 2, 162, 22, PALETTE.ink, 'center', 600);
 
   const panelX = ARENA_W / 2 - 300;
-  drawPanel(ctx, panelX, 200, 600, 370, 18, 'rgba(14,11,36,0.92)');
+  drawPanel(ctx, panelX, 200, 600, 345, 18, 'rgba(14,11,36,0.92)');
   const rows = [
     ['Waves cleared', `${world.stats.wavesCleared} / ${TOTAL_WAVES}`],
     ['Shades dispelled', String(world.stats.kills)],
@@ -263,16 +283,12 @@ export function drawResults(ctx, world, best, isNewBest, time) {
   } else {
     text(ctx, world.score >= best ? '' : `${(best - world.score).toLocaleString('en-US')} short of best`, panelX + 560, 512, 16, PALETTE.dim, 'right', 600);
   }
-  const owned = UPGRADES.filter((upgrade) => world.upgrades[upgrade.id] > 0);
-  owned.forEach((upgrade, index) => {
-    const x = ARENA_W / 2 - (owned.length * 46) / 2 + index * 46 + 23;
-    drawUpgradeIcon(ctx, upgrade.id, x, 545, 30);
-  });
+  drawBuild(ctx, world.upgrades, ARENA_W / 2 + 30, 606, 'BUILD');
 
   const pulse = 0.6 + 0.4 * Math.sin(time * 3.5);
-  drawPanel(ctx, ARENA_W / 2 - 250, 620, 500, 60, 30, `rgba(255,212,110,${0.1 + 0.12 * pulse})`, `rgba(255,212,110,${0.5 + 0.5 * pulse})`);
-  text(ctx, 'Press R or click to play again', ARENA_W / 2, 651, 26, '#ffffff', 'center', 800);
-  text(ctx, 'Esc returns to the title', ARENA_W / 2, 712, 16, PALETTE.dim, 'center', 600);
+  drawPanel(ctx, ARENA_W / 2 - 250, 660, 500, 60, 30, `rgba(255,212,110,${0.1 + 0.12 * pulse})`, `rgba(255,212,110,${0.5 + 0.5 * pulse})`);
+  text(ctx, 'Press R or click to play again', ARENA_W / 2, 691, 26, '#ffffff', 'center', 800);
+  text(ctx, 'Esc returns to the title', ARENA_W / 2, 750, 16, PALETTE.dim, 'center', 600);
 }
 
 // ----- Pause -------------------------------------------------------------------------------------------------

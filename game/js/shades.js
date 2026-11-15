@@ -3,12 +3,12 @@ import { ARENA_H, ARENA_W, CORE_X, CORE_Y, TAU, WHITE } from './config.js';
 
 /** Base stats per kind; speed is pixels per second before the wave's speed-up. */
 export const SHADE_KINDS = {
-  drifter: { label: 'Drifter', radius: 15, hp: 2.0, speed: 44, value: 10, coreDamage: 1 },
-  darter: { label: 'Darter', radius: 11, hp: 1.1, speed: 92, value: 15, coreDamage: 1 },
-  splitter: { label: 'Splitter', radius: 19, hp: 3.0, speed: 38, value: 20, coreDamage: 2 },
-  shard: { label: 'Shard', radius: 9, hp: 0.7, speed: 74, value: 5, coreDamage: 1 },
-  prismling: { label: 'Prismling', radius: 14, hp: 2.4, speed: 50, value: 25, coreDamage: 1 },
-  bulwark: { label: 'Bulwark', radius: 27, hp: 2.6, speed: 25, value: 60, coreDamage: 3, shellHp: 2.2 },
+  drifter: { label: 'Drifter', radius: 17, hp: 2.0, speed: 44, value: 10, coreDamage: 1 },
+  darter: { label: 'Darter', radius: 12, hp: 1.1, speed: 92, value: 15, coreDamage: 1 },
+  splitter: { label: 'Splitter', radius: 21, hp: 3.0, speed: 38, value: 20, coreDamage: 2 },
+  shard: { label: 'Shard', radius: 10, hp: 0.7, speed: 74, value: 5, coreDamage: 1 },
+  prismling: { label: 'Prismling', radius: 16, hp: 2.4, speed: 50, value: 25, coreDamage: 1 },
+  bulwark: { label: 'Bulwark', radius: 29, hp: 2.6, speed: 25, value: 60, coreDamage: 3, shellHp: 2.2 },
   eclipse: { label: 'The Eclipse', radius: 60, hp: 1, speed: 0, value: 0, coreDamage: 0 },
 };
 
