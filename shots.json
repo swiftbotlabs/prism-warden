@@ -1,0 +1,6 @@
+[
+  { "name": "1-play.jpg", "query": "?shot=play&seed=7", "shows": "Wave 7 mid-run: a three-colour Prism-split beam bouncing off mirror shards and walls, many Shades of different kinds, a live combo and the full HUD (Core HP, wave 7/10 with progress, score, best, combo, colour selector, owned upgrades)." },
+  { "name": "2-title.jpg", "query": "?shot=title&seed=7", "shows": "The title screen: logo, tagline, a live reflected beam show, controls, rules of light, best score and 'Click to begin'." },
+  { "name": "3-upgrade.jpg", "query": "?shot=upgrade&seed=7", "shows": "Between waves: WAVE 5 CLEARED and the choice of three upgrade cards, each with icon, name, level and effect." },
+  { "name": "4-results.jpg", "query": "?shot=results&seed=7", "shows": "The results after beating THE ECLIPSE: VICTORY, waves cleared, Shades dispelled, colour accuracy, best combo, time, score vs best and 'Press R or click to play again'." }
+]
