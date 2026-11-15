@@ -1,4 +1,4 @@
-// Screenshot scenes behind ?shot=title|play|upgrade|results|defeat&seed=n: the real game played forward by the autopilot at fixed steps, frozen on the moment.
+// Screenshot scenes behind ?shot=title|play|upgrade|boss|results|defeat&seed=n: the real game played forward by the autopilot at fixed steps, frozen on the moment.
 import { STEP } from './config.js';
 import { autopilotControls, autopilotPick, createPilot } from './autopilot.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
@@ -100,6 +100,14 @@ export function runShotScene(game, kind, seed, hooks) {
           game.hovered = 1;
           game.time = 1;
           hooks.setMode('upgrade');
+        }
+        break;
+      case 'boss':
+        world = playUntil(runSeed, (w) => w.boss && !w.boss.dead && w.boss.phase === 1 && w.boss.hp < w.boss.maxHp * 0.7 && w.beams.length > 0);
+        if (world) {
+          game.world = world;
+          game.colour = world.warden.colour;
+          hooks.setMode('play');
         }
         break;
       case 'results':

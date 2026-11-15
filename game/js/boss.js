@@ -38,7 +38,7 @@ export function updateEclipse(world, boss, dt) {
   boss.orbitRadius += (targetRadius - boss.orbitRadius) * Math.min(1, dt * 0.8);
   boss.orbit += phase.orbitSpeed * dt;
   const goalX = CORE_X + Math.cos(boss.orbit) * boss.orbitRadius * 1.4;
-  const goalY = CORE_Y + Math.sin(boss.orbit) * boss.orbitRadius * 0.82;
+  const goalY = CORE_Y + 20 + Math.sin(boss.orbit) * boss.orbitRadius * 0.68;
   const ease = boss.entering > 0 ? 1.6 : 6;
   boss.x += (goalX - boss.x) * Math.min(1, dt * ease);
   boss.y += (goalY - boss.y) * Math.min(1, dt * ease);

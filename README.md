@@ -49,7 +49,7 @@ The game is plain static files in `game/`: ES modules, no build step and no thir
 | `game/js/audio.js` | WebAudio sound effects and generative music |
 | `game/js/storage.js` | best score and mute setting in localStorage |
 | `game/js/autopilot.js` | a built-in pilot for the screenshot scenes and playtests |
-| `game/js/shots.js` | screenshot scenes (`?shot=title\|play\|upgrade\|results\|defeat&seed=n`) |
+| `game/js/shots.js` | screenshot scenes (`?shot=title\|play\|upgrade\|boss\|results\|defeat&seed=n`) |
 
 Outside `game/`: `main.ts` checks the screenshots and `game/` against the contest limits, copies them to the output folder and writes `dossier.json` (`vendor/makefun-game.ts` is make.fun's library, unchanged). `serve.ts` is a small local server. `shots.json` lists the screenshot scenes. `tools/capture-shots.mjs` captures them in headless Chrome, `tools/playtest.mjs` plays the game through start, play, pause, upgrade, win, lose and restart, and `tools/simulate.mjs` plays whole runs in Node to check the balance.
 
