@@ -5,7 +5,8 @@ import { drawPanel } from './hud.js';
 import { drawWorld } from './render.js';
 import { makeMirror } from './arena.js';
 import { castBeams } from './beam.js';
-import { createShade } from './shades.js';
+import { createShade, SHADE_KINDS } from './shades.js';
+import { ECLIPSE_PHASES } from './boss.js';
 import { createUpgradeLevels, upgradeById, UPGRADES } from './upgrades.js';
 import { WAVE_PLAN } from './waves.js';
 import { colourAccuracy } from './world.js';
@@ -119,7 +120,10 @@ export function drawTitle(ctx, scene, best, time) {
   ctx.strokeStyle = 'rgba(255,255,255,0.85)';
   ctx.strokeText('PRISM WARDEN', ARENA_W / 2, 104);
   ctx.restore();
-  text(ctx, 'Bend light. Hold the core.', ARENA_W / 2, 172, 26, '#f4f0ff', 'center', 600);
+  text(ctx, 'Bend light. Hold the core.', ARENA_W / 2, 164, 26, '#f4f0ff', 'center', 600);
+  const shadeKinds = Object.keys(SHADE_KINDS).filter((kind) => kind !== 'eclipse').length;
+  const phases = ['one', 'two', 'three', 'four'][ECLIPSE_PHASES.length - 1] ?? ECLIPSE_PHASES.length;
+  text(ctx, `${TOTAL_WAVES} waves · ${shadeKinds} kinds of Shade · ${UPGRADES.length} upgrades · a ${phases}-phase boss`, ARENA_W / 2, 204, 21, PALETTE.gold, 'center', 800);
 
   drawPanel(ctx, 36, 236, 330, 300, 14);
   text(ctx, 'CONTROLS', 60, 266, 18, PALETTE.gold, 'left');
@@ -242,7 +246,7 @@ function drawBuild(ctx, levels, cx, y, label) {
 
 // ----- Results ------------------------------------------------------------------------------------------------
 
-export function drawResults(ctx, world, best, isNewBest, time) {
+export function drawResults(ctx, world, best, isNewBest, previousBest, time) {
   drawWorld(ctx, world, time, false);
   const won = world.state === 'won';
   dim(ctx, won ? 0.5 : 0.66);
@@ -271,7 +275,7 @@ export function drawResults(ctx, world, best, isNewBest, time) {
   ctx.fillRect(panelX + 30, 434, 540, 1.5);
   text(ctx, 'SCORE', panelX + 40, 468, 22, PALETTE.gold, 'left', 800);
   text(ctx, world.score.toLocaleString('en-US'), panelX + 560, 470, 42, '#ffffff', 'right', 900);
-  text(ctx, `BEST ${best.toLocaleString('en-US')}`, panelX + 40, 512, 18, PALETTE.dim, 'left', 700);
+  text(ctx, isNewBest ? `PREVIOUS BEST ${previousBest.toLocaleString('en-US')}` : `BEST ${best.toLocaleString('en-US')}`, panelX + 40, 512, 18, PALETTE.dim, 'left', 700);
   if (isNewBest) {
     const pop = 1 + 0.06 * Math.sin(time * 6);
     ctx.save();

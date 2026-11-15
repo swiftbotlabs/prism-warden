@@ -438,7 +438,7 @@ function drawBeams(ctx, beams, time) {
   const flicker = 1 + 0.08 * Math.sin(time * 47);
   for (const beam of beams) {
     const light = LIGHTS[beam.colour];
-    const width = beam.halfWidth * flicker;
+    const width = beam.halfWidth * flicker * (beam.power < 1 ? 0.7 : 1.15);
     ctx.beginPath();
     ctx.moveTo(beam.points[0], beam.points[1]);
     for (let i = 2; i < beam.points.length; i += 2) ctx.lineTo(beam.points[i], beam.points[i + 1]);
@@ -457,6 +457,9 @@ function drawBeams(ctx, beams, time) {
     }
     drawGlow(ctx, beam.endX, beam.endY, beam.blocked ? 34 : 18, light.rgb, 1);
   }
+  const main = beams[0];
+  drawGlow(ctx, main.points[0], main.points[1], 34, LIGHTS[main.colour].rgb, 1);
+  drawGlow(ctx, main.points[0], main.points[1], 12, '255,255,255', 0.9);
   ctx.globalCompositeOperation = 'source-over';
   for (const beam of beams) drawLightGlyph(ctx, beam.colour, beam.endX, beam.endY, 6, 0.95);
   ctx.restore();

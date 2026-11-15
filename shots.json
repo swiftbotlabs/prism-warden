@@ -1,6 +1,22 @@
 [
-  { "name": "1-play.jpg", "query": "?shot=play&seed=7", "shows": "Wave 7 mid-run: a three-colour Prism-split beam bouncing off mirror shards and walls, many Shades of different kinds, a live combo and the full HUD (Core HP, wave 7/10 with progress, score, best, combo, colour selector, owned upgrades)." },
-  { "name": "2-title.jpg", "query": "?shot=title&seed=7", "shows": "The title screen: logo, tagline, a live reflected beam show, controls, rules of light, best score and 'Click to begin'." },
-  { "name": "3-upgrade.jpg", "query": "?shot=upgrade&seed=7", "shows": "Between waves: WAVE 5 CLEARED and the choice of three upgrade cards, each with icon, name, level and effect." },
-  { "name": "4-results.jpg", "query": "?shot=results&seed=7", "shows": "The results after beating THE ECLIPSE: VICTORY, waves cleared, Shades dispelled, colour accuracy, best combo, time, score vs best and 'Press R or click to play again'." }
+  {
+    "name": "1-play.jpg",
+    "query": "?shot=play&seed=7",
+    "shows": "Wave 7 mid-run, chosen over the THE ECLIPSE boss frame (?shot=boss) as the more striking and readable cover: the Warden casts a thick Verdant beam (the colour lit in the colour bar) that bounces off mirrors and walls, with thinner Ember and Azure Prism branches, many Shades of five kinds, a combo and the full HUD (Core 12/12, wave 7/10 with progress, score 7,495 vs BEST 28,410, combo, colour selector, owned upgrades)."
+  },
+  {
+    "name": "2-title.jpg",
+    "query": "?shot=title&seed=7",
+    "shows": "The title screen: logo, tagline, '10 waves \u00b7 6 kinds of Shade \u00b7 9 upgrades \u00b7 a three-phase boss', a live reflected beam show, controls, rules of light, BEST SCORE 28,410 and 'Click to begin'."
+  },
+  {
+    "name": "3-upgrade.jpg",
+    "query": "?shot=upgrade&seed=7",
+    "shows": "Between waves: WAVE 5 CLEARED and the choice of three upgrade cards, each with icon, name, level and effect, plus the Core, score, next wave and the build so far."
+  },
+  {
+    "name": "4-results.jpg",
+    "query": "?shot=results&seed=7",
+    "shows": "The results after beating THE ECLIPSE: VICTORY, waves cleared, Shades dispelled, colour accuracy, best combo, time, score 32,925 marked NEW BEST over the previous best 28,410, the build, and 'Press R or click to play again'."
+  }
 ]

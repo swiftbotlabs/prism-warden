@@ -6,14 +6,14 @@ import { partStruck } from './shades.js';
 const PICK_ORDER = ['prism', 'focus', 'reflect', 'lens', 'chain', 'bastion', 'focus', 'lance', 'harvest', 'swift'];
 
 /** The most urgent Shade: soonest to reach the Core, with the boss last unless it is alone. */
-function mostUrgentShade(world) {
+function mostUrgentShade(world, bossFocus) {
   let target = null;
   let soonest = Infinity;
   for (const shade of world.shades) {
     if (shade.dead) continue;
     if (shade.x < -10 || shade.x > 1290 || shade.y < -10 || shade.y > 810) continue;
     let eta = (Math.hypot(shade.x - CORE_X, shade.y - CORE_Y) - 40) / Math.max(20, shade.speed);
-    if (shade.kind === 'eclipse') eta = shade.entering > 0 ? Infinity : 25;
+    if (shade.kind === 'eclipse') eta = shade.entering > 0 ? Infinity : bossFocus ? 3.5 : 25;
     if (shade.kind === 'bulwark') eta *= 0.8;
     if (eta < soonest) {
       soonest = eta;
@@ -36,8 +36,8 @@ function colourFor(world, shade) {
 }
 
 /** A pilot's memory: it re-thinks its target every `reaction` seconds, as a person would (0 = instantly). */
-export function createPilot(reaction = 0, aimError = 0) {
-  return { reaction, aimError, timer: 0, target: null, colour: 0, clock: 0 };
+export function createPilot(reaction = 0, aimError = 0, bossFocus = false) {
+  return { reaction, aimError, bossFocus, timer: 0, target: null, colour: 0, clock: 0 };
 }
 
 /** Controls for one step: {moveX, moveY, aimX, aimY, casting, colour}. */
@@ -47,7 +47,7 @@ export function autopilotControls(world, pilot = createPilot(0), dt = 1 / 60) {
   pilot.clock += dt;
   if (pilot.timer <= 0 || !pilot.target || pilot.target.dead) {
     pilot.timer = pilot.reaction;
-    pilot.target = mostUrgentShade(world);
+    pilot.target = mostUrgentShade(world, pilot.bossFocus);
     if (pilot.target) pilot.colour = colourFor(world, pilot.target);
   }
   const target = pilot.target && !pilot.target.dead ? pilot.target : null;

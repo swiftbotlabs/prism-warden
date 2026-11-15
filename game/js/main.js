@@ -26,6 +26,7 @@ const game = {
   hovered: -1,
   best: loadBestScore(),
   newBest: false,
+  previousBest: 0,
   colour: 0,
   time: 0,
   modeTime: 0,
@@ -225,6 +226,7 @@ function stepGame(dt) {
       setMusicMood('calm');
     }
     if (game.mode === 'play' && (world.state === 'won' || world.state === 'lost') && world.stateTime > 2.4) {
+      game.previousBest = game.best;
       game.newBest = world.score > game.best;
       game.best = saveBestScore(world.score);
       setMode('results');
@@ -255,7 +257,7 @@ export function drawFrame() {
       drawUpgradeChoice(ctx, world, game.hand, game.hovered, game.time);
       break;
     case 'results':
-      drawResults(ctx, world, game.best, game.newBest, game.time);
+      drawResults(ctx, world, game.best, game.newBest, game.previousBest, game.time);
       break;
     default:
       drawWorld(ctx, world, game.time, game.mode === 'play');

@@ -1,28 +1,33 @@
 // Screenshot scenes behind ?shot=title|play|upgrade|boss|results|defeat&seed=n: the real game played forward by the autopilot at fixed steps, frozen on the moment.
-import { STEP } from './config.js';
+import { CORE_X, CORE_Y, STEP } from './config.js';
 import { autopilotControls, autopilotPick, createPilot } from './autopilot.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
 import { applyUpgrade, dealUpgradeCards } from './upgrades.js';
-import { liveParticleCount, updateEffects, clearEffects } from './particles.js';
+import { clearEffects, floatersNear, liveParticleCount, updateEffects } from './particles.js';
+import { loadBestScore, saveBestScore } from './storage.js';
 import { simRandom } from './random.js';
 import { updateTitleScene } from './screens.js';
 
 /** The upgrades a shot's pilot prefers: the ones that show off split and reflected light. */
 const SHOT_PICKS = ['prism', 'reflect', 'lens', 'focus', 'chain', 'bastion', 'lance', 'harvest', 'swift'];
 const MAX_SECONDS = 60 * 12;
+/**
+ * The best score already on record in every scene's browser profile, so the four screenshots tell one story:
+ * the title and the play HUD show it, and the winning run on the results beats it.
+ */
+const RECORDED_BEST = 28410;
 
 /**
  * Plays a run with the autopilot until `stop(world, step)` says so (checked once a step), taking upgrades on the way.
  * Returns the world, or null if the run ended or ran out of time first.
  */
-function playUntil(seed, stop, picks = SHOT_PICKS) {
+function playUntil(seed, stop, pilot = createPilot(0)) {
   const world = createWorld(seed);
-  const pilot = createPilot(0);
   for (let step = 0; step < MAX_SECONDS / STEP; step += 1) {
     if (world.state === 'cleared' && world.stateTime > 1.3) {
       if (stop(world, step)) return world;
       const hand = dealUpgradeCards(world.upgrades, simRandom, world.core.hp / world.core.maxHp);
-      const preferred = picks.find((id) => hand.includes(id));
+      const preferred = SHOT_PICKS.find((id) => hand.includes(id));
       applyUpgrade(world, preferred ?? hand[autopilotPick(hand, world.upgrades)]);
       beginWave(world, world.wave + 1);
     }
@@ -35,40 +40,100 @@ function playUntil(seed, stop, picks = SHOT_PICKS) {
   return null;
 }
 
-/**
- * How striking a mid-run frame is: many Shades of several kinds on screen, split and bounced beams, a live combo,
- * particles. Frames that would hide the HUD story (a banner, a hurt Core, the Warden under a panel) score -1.
- */
-function dramaScore(world) {
-  if (world.wave !== 7 || world.state !== 'fight' || world.banner) return -1;
-  const warden = world.warden;
-  if (world.core.hp < world.core.maxHp * 0.6 || warden.y < 150 || warden.y > 680 || world.beams.length < 3) return -1;
-  const onScreen = world.shades.filter((s) => !s.dead && s.x > 20 && s.x < 1260 && s.y > 110 && s.y < 720);
-  const kinds = new Set(onScreen.map((s) => s.kind)).size;
-  const bounces = world.beams.reduce((sum, beam) => sum + beam.bounces.length / 2, 0);
-  const hits = world.beams.reduce((sum, beam) => sum + beam.hits.length, 0);
-  return onScreen.length + kinds * 3 + Math.min(bounces, 5) * 3 + hits * 2 + Math.min(world.combo, 40) / 2 + liveParticleCount() / 60;
+/** Length of a beam's polyline, and of its first leg (the part that leaves the Warden). */
+function beamLengths(beam) {
+  let total = 0;
+  let first = 0;
+  for (let i = 2; i < beam.points.length; i += 2) {
+    const leg = Math.hypot(beam.points[i] - beam.points[i - 2], beam.points[i + 1] - beam.points[i - 1]);
+    if (i === 2) first = leg;
+    total += leg;
+  }
+  return { total, first };
 }
 
-/** Plays wave 7 once to find its most dramatic step, then replays the same seed to exactly that step. */
-function mostDramaticMoment(seed) {
+/** Facts shared by both mid-run framings: Shades on screen, kinds, colours, bounces, hits. */
+function frameFacts(world) {
+  const onScreen = world.shades.filter((s) => !s.dead && s.kind !== 'eclipse' && s.x > 20 && s.x < 1260 && s.y > 110 && s.y < 720);
+  return {
+    onScreen,
+    kinds: new Set(onScreen.map((s) => s.kind)).size,
+    colours: new Set(onScreen.map((s) => s.colour)).size,
+    bounces: world.beams.reduce((sum, beam) => sum + beam.bounces.length / 2, 0),
+    hits: world.beams.reduce((sum, beam) => sum + beam.hits.length, 0),
+  };
+}
+
+/** True when the beams read at a glance: a long main beam leaving the Warden, and every Prism branch long too. */
+function beamsReadable(world, mainFirst, branchTotal, minBeams) {
+  if (world.beams.length < minBeams) return false;
+  const [main, ...branches] = world.beams.map(beamLengths);
+  return main.first >= mainFirst && branches.every((b) => b.total >= branchTotal);
+}
+
+/**
+ * How striking a wave-7 frame is. Frames that would muddle the story score -1: a banner, a hurt Core, text over the
+ * Core, the Warden under a HUD panel, a short main beam or stubby branches.
+ */
+function waveDrama(world) {
+  if (world.wave !== 7 || world.state !== 'fight' || world.banner) return -1;
+  const warden = world.warden;
+  if (world.core.hp < world.core.maxHp * 0.6 || warden.y < 150 || warden.y > 660 || warden.x < 60 || warden.x > 1220) return -1;
+  if (floatersNear(CORE_X, CORE_Y, 90) > 0 || !beamsReadable(world, 220, 200, 3)) return -1;
+  const main = beamLengths(world.beams[0]);
+  const facts = frameFacts(world);
+  if (facts.bounces < 2 || main.total < 400 || world.combo < 5 || facts.onScreen.length < 10) return -1;
+  return Math.min(main.total, 700) / 70 + facts.onScreen.length + facts.kinds * 3 + Math.min(facts.bounces, 5) * 3 + facts.hits * 2
+    + Math.min(world.combo, 40) / 2 + liveParticleCount() / 60;
+}
+
+/**
+ * How striking a boss frame is: the Warden casting THE ECLIPSE's own colour into it, branches and bounces,
+ * minions of several colours, its phase bar mid-way, and its name label clear of everything.
+ */
+function bossDrama(world) {
+  const boss = world.boss;
+  if (world.wave !== 10 || world.state !== 'fight' || world.banner || !boss || boss.dead || boss.entering > 0) return -1;
+  if (boss.phase !== 1 || boss.hp > boss.maxHp * 0.7 || boss.hp < boss.maxHp * 0.3) return -1;
+  const warden = world.warden;
+  const main = world.beams[0];
+  if (!main || main.colour !== boss.colour || !main.hits.some((hit) => hit.shade === boss)) return -1;
+  if (boss.x < 160 || boss.x > 1120 || boss.y < 230 || boss.y > 600 || warden.y < 150 || warden.y > 660) return -1;
+  if (floatersNear(CORE_X, CORE_Y, 90) > 0 || !beamsReadable(world, 120, 160, 2)) return -1;
+  const label = { left: boss.x - 80, right: boss.x + 80, top: boss.y + boss.r + 14, bottom: boss.y + boss.r + 52 };
+  const blocksLabel = (x, y, r) => x + r > label.left && x - r < label.right && y + r > label.top && y - r < label.bottom;
+  if (blocksLabel(warden.x, warden.y, warden.r + 6) || world.shades.some((s) => !s.dead && s !== boss && blocksLabel(s.x, s.y, s.r))) return -1;
+  if (world.beams.some((beam) => beam.points.some((v, i) => i % 2 === 0 && blocksLabel(v, beam.points[i + 1], 4)))) return -1;
+  const facts = frameFacts(world);
+  if (facts.onScreen.length < 3 || facts.colours < 2) return -1;
+  return facts.onScreen.length * 2 + world.beams.length * 6 + facts.colours * 4 + facts.kinds * 2 + Math.min(facts.bounces, 5) * 3 + facts.hits * 2
+    + (world.core.hp / world.core.maxHp) * 12 + liveParticleCount() / 60;
+}
+
+/**
+ * Plays the run once, scoring every step with `drama`, until `done(world)`; then replays the same seed to exactly
+ * the best-scoring step (the rules are deterministic, so the replay lands on the same frame).
+ */
+function mostDramaticMoment(seed, drama, done, makePilot) {
   let bestStep = -1;
   let bestScore = 0;
   playUntil(seed, (world, step) => {
-    const score = dramaScore(world);
+    const score = drama(world);
     if (score > bestScore) {
       bestScore = score;
       bestStep = step;
     }
-    return world.wave > 7 || (world.wave === 7 && world.state === 'cleared');
-  });
+    return done(world);
+  }, makePilot());
   if (bestStep < 0) return null;
   clearEffects();
-  return playUntil(seed, (world, step) => step === bestStep);
+  return playUntil(seed, (world, step) => step === bestStep, makePilot());
 }
 
 /** Sets up scene `kind` from `seed`, draws it once and flags `window.__shotReady` for the capture script. */
 export function runShotScene(game, kind, seed, hooks) {
+  saveBestScore(RECORDED_BEST);
+  game.best = Math.max(loadBestScore(), RECORDED_BEST);
   let world = null;
   for (let attempt = 0; attempt < 6 && !world; attempt += 1) {
     const runSeed = seed + attempt * 101;
@@ -80,12 +145,14 @@ export function runShotScene(game, kind, seed, hooks) {
           updateEffects(STEP);
         }
         game.time = 4.6;
-        game.best = Math.max(game.best, 41250);
         hooks.setMode('title');
         world = game.titleScene;
         break;
       case 'play':
-        world = mostDramaticMoment(runSeed);
+      case 'boss':
+        world = kind === 'play'
+          ? mostDramaticMoment(runSeed, waveDrama, (w) => w.wave > 7 || (w.wave === 7 && w.state === 'cleared'), () => createPilot(0))
+          : mostDramaticMoment(runSeed, bossDrama, (w) => w.wave === 10 && w.boss && (w.boss.dead || w.boss.phase > 1), () => createPilot(0, 0, true));
         if (world) {
           game.world = world;
           game.colour = world.warden.colour;
@@ -102,14 +169,6 @@ export function runShotScene(game, kind, seed, hooks) {
           hooks.setMode('upgrade');
         }
         break;
-      case 'boss':
-        world = playUntil(runSeed, (w) => w.boss && !w.boss.dead && w.boss.phase === 1 && w.boss.hp < w.boss.maxHp * 0.7 && w.beams.length > 0);
-        if (world) {
-          game.world = world;
-          game.colour = world.warden.colour;
-          hooks.setMode('play');
-        }
-        break;
       case 'results':
       case 'defeat': {
         const wanted = kind === 'results' ? 'won' : 'lost';
@@ -118,8 +177,9 @@ export function runShotScene(game, kind, seed, hooks) {
           : playIdleUntilLost(runSeed);
         if (world && world.state === wanted) {
           game.world = world;
-          game.newBest = true;
-          game.best = world.score;
+          game.previousBest = game.best;
+          game.newBest = world.score > game.best;
+          game.best = Math.max(saveBestScore(world.score), world.score, game.best);
           game.time = 0.25;
           hooks.setMode('results');
         } else {
@@ -134,7 +194,7 @@ export function runShotScene(game, kind, seed, hooks) {
   }
   hooks.drawFrame();
   window.__shotReady = true;
-  window.__shotScene = { kind, found: Boolean(world) };
+  window.__shotScene = { kind, found: Boolean(world), seed: world?.seed, wave: world?.wave, score: world?.score, best: game.best };
 }
 
 /** A run where the Warden never casts: the Shades reach the Core and it shatters. */

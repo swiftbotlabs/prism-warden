@@ -107,6 +107,13 @@ export function updateEffects(dt) {
   }
 }
 
+/** Floating texts whose centre is within `radius` of (x, y). */
+export function floatersNear(x, y, radius) {
+  let count = 0;
+  for (const f of floaters) if (f.live && Math.hypot(f.x - x, f.y - y) < radius) count += 1;
+  return count;
+}
+
 export function clearEffects() {
   for (const p of particles) p.live = false;
   for (const f of floaters) f.live = false;

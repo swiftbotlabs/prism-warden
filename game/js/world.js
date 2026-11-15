@@ -1,5 +1,5 @@
 // One run of Prism Warden: the run's state and its fixed step (steering, spawns, beams, damage, combo, the Core, win and loss).
-import { COMBO_TUNING, CORE_BASE_HP, CORE_RADIUS, CORE_X, CORE_Y, LIGHTS, TOTAL_WAVES, WHITE } from './config.js';
+import { ARENA_W, COMBO_TUNING, CORE_BASE_HP, CORE_RADIUS, CORE_X, CORE_Y, LIGHTS, TOTAL_WAVES, WHITE } from './config.js';
 import { createWarden, steerWarden, beamOrigin } from './warden.js';
 import { castBeams } from './beam.js';
 import { createShade, lightHarms, moveShades } from './shades.js';
@@ -258,7 +258,7 @@ function killShade(world, shade, colour, depth) {
   burst(shade.x, shade.y, '255,255,255', 6, 150, 0.35, 2.5);
   world.events.push({ type: 'kill', colour, combo: world.combo });
   if (world.combo > 0 && world.combo % 10 === 0) {
-    floatText(world.warden.x, world.warden.y - 34, `${world.combo} COMBO · x${multiplier}`, '#ffd46e', 22, 1.3);
+    floatText(ARENA_W - 166, 150, `${world.combo} COMBO · x${multiplier}`, '#ffd46e', 22, 1.3);
   }
 
   if (shade.kind === 'splitter') {
