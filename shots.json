@@ -1,13 +1,13 @@
 [
   {
     "name": "1-play.jpg",
-    "query": "?shot=play&seed=7",
-    "shows": "Wave 8 of 10 on the floor of a ruined crystal observatory at night (worn violet flagstones, brass astrolabe rings, broken pillars, crystal clusters, star charts, the Core on a carved dais whose runes light one per wave). An Azure main beam (lit in the colour bar) and its Ember and Verdant Prism branches bounce off brass-socketed mirror shards and strike Shades of several colours. About 11 Shades of five kinds, combo x5, Core 12/12, and the HUD in few words: 'WIN: break THE ECLIPSE after wave 10 \u00b7 LOSE: the Core shatters', '0 = RUN LOST', '2 WAVES TO THE ECLIPSE', INCOMING ('Drifter x6'), a short event log, 'MATCH COLOUR' with the shape pairs, and the named build. The scene first searches 200 runs for a THE ECLIPSE frame; it falls back to wave 8 when none passes all its framing rules."
+    "query": "?shot=play&seed=44043&step=16903&reaction=0.3&focus=1",
+    "shows": "THE ECLIPSE mid-fight on wave 10, in the ruined crystal observatory. The boss is in its second phase (PENUMBRA, Azure), with its phase bar near half. The Warden casts Azure into it, while the Prism branches in Ember and Verdant bounce off the walls and mirror shards through minions of all three colours that marched in from the arena edges. One score popup, combo x4, Core 11/12, and the HUD in few words: 'WIN: break THE ECLIPSE after wave 10 \u00b7 LOSE: the Core shatters', '0 = RUN LOST', 'BREAK THE ECLIPSE', INCOMING, the event log, 'MATCH COLOUR' and the named build. The frame was chosen by tools/find-cover.mjs from 600 autopilot runs; ?shot=play replays that exact step."
   },
   {
     "name": "2-title.jpg",
     "query": "?shot=title&seed=7",
-    "shows": "The title screen over the observatory floor: logo, tagline, 'OBJECTIVE  WIN: break THE ECLIPSE after wave 10 \u00b7 LOSE: the Core shatters', '10 waves \u00b7 6 kinds of Shade \u00b7 9 upgrades \u00b7 a three-phase boss', a live reflected beam show, controls, RULES OF LIGHT opening with 'Match the beam to the Shade's colour', BEST SCORE 28,410 and 'Click to begin'."
+    "shows": "The title screen over the observatory floor: logo, tagline, 'OBJECTIVE  WIN: break THE ECLIPSE after wave 10 \u00b7 LOSE: the Core shatters', '10 waves \u00b7 7 kinds of Shade \u00b7 9 upgrades \u00b7 a three-phase boss', a live reflected beam show, controls, RULES OF LIGHT opening with 'Match the beam to the Shade's colour', BEST SCORE 28,410 and 'Click to begin'."
   },
   {
     "name": "3-upgrade.jpg",

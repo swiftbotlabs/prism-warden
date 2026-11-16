@@ -40,7 +40,6 @@ export function createWorld(seed) {
     banner: null,
     events: [],
     log: [],
-    lastKill: null,
   };
   beginWave(world, 1);
   return world;
@@ -272,7 +271,6 @@ function killShade(world, shade, colour, depth) {
   burst(shade.x, shade.y, light.rgb, 14 + shade.r, 240, 0.75, 3.5);
   burst(shade.x, shade.y, '255,255,255', 6, 150, 0.35, 2.5);
   killRing(shade.x, shade.y, light.rgb, shade.r * 2.6);
-  world.lastKill = { x: shade.x, y: shade.y, colour: shade.colour, beamColour: colour, time: world.time };
   world.events.push({ type: 'kill', colour, combo: world.combo });
   if (depth > 0) logEvent(world, `+${points} CHAIN x${depth + 1}`, LIGHTS[colour].hex);
   else if (shade.kind === 'bulwark' || shade.kind === 'prismling' || shade.kind === 'splitter') {

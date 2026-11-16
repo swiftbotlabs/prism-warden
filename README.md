@@ -6,7 +6,7 @@
 
 **PRISM WARDEN: bend light, hold the core.** An original top-down arena defence game about coloured light. A crystal Core floats on a carved dais in a ruined observatory at night, with worn violet flagstones, brass astrolabe rings, broken pillars and crystal clusters. The dais runes light up one per wave. Shades drift in from every edge to crack it. You are the Warden, a small glowing lens. Cast a beam toward the cursor and choose its colour: **Ember** (red, triangle), **Verdant** (green, square) or **Azure** (blue, circle). Only light of a Shade's own colour harms it; white Shades fall to any light. Beams bounce off the mirror shards placed for each wave, and upgrades let them bounce off walls and split into extra colours.
 
-Survive ten waves. Each wave brings something new: Drifters, zig-zagging Darters, Splitters that burst into two Shades of the other colours, Prismlings that change colour every 2 s, and Bulwarks with rotating three-colour shells whose heart can only be hit through a gap you break. Wave 10 is the boss, **THE ECLIPSE**, with three phases that change its colour, orbit and summons. After every wave you pick 1 of 3 upgrade cards: Prism, Reflect, Focus, Lens, Chain, Lance, Bastion, Swift or Harvest. Your score is kills times your combo multiplier, and your best score is saved in the browser.
+Survive ten waves. Each wave brings something new: Drifters, zig-zagging Darters, Splitters that burst into two Shades of the other colours, Prismlings that change colour every 2 s, Umbra orbs from the boss's Shadow Ring, and Bulwarks with rotating three-colour shells whose heart can only be hit through a gap you break. Wave 10 is the boss, **THE ECLIPSE**, with three phases that change its colour and orbit. In each phase it calls legions of minions in all three colours from the arena edges. Every few seconds it telegraphs a **Shadow Ring**: the ground darkens round it, then a ring of Umbra orbs flies out. Any light cuts the orbs, and those that reach the Core crack it. After every wave you pick 1 of 3 upgrade cards: Prism, Reflect, Focus, Lens, Chain, Lance, Bastion, Swift or Harvest. Your score is kills times your combo multiplier, and your best score is saved in the browser.
 
 ### Controls
 
@@ -52,9 +52,9 @@ The game is plain static files in `game/`: ES modules, no build step and no thir
 | `game/js/audio.js` | WebAudio sound effects and generative music |
 | `game/js/storage.js` | best score and mute setting in localStorage |
 | `game/js/autopilot.js` | a built-in pilot for the screenshot scenes and playtests |
-| `game/js/shots.js` | screenshot scenes (`?shot=title\|play\|wave\|upgrade\|results\|defeat&seed=n`) |
+| `game/js/shots.js` | screenshot scenes (`?shot=title\|play\|upgrade\|results\|defeat`, `play` replaying a seed to a given step) |
 
-Outside `game/`: `main.ts` checks the screenshots and `game/` against the contest limits, copies them to the output folder and writes `dossier.json` (`vendor/makefun-game.ts` is make.fun's library, unchanged). `serve.ts` is a small local server. `shots.json` lists the screenshot scenes. `tools/capture-shots.mjs` captures them in headless Chrome, `tools/playtest.mjs` plays the game through start, play, pause, upgrade, win, lose and restart, and `tools/simulate.mjs` plays whole runs in Node to check the balance.
+Outside `game/`: `main.ts` checks the screenshots and `game/` against the contest limits, copies them to the output folder and writes `dossier.json` (`vendor/makefun-game.ts` is make.fun's library, unchanged). `serve.ts` is a small local server. `shots.json` lists the screenshot scenes. `tools/capture-shots.mjs` captures them in headless Chrome, `tools/playtest.mjs` plays the game through start, play, pause, upgrade, win, lose and restart, `tools/simulate.mjs` plays whole runs in Node to check the balance, and `tools/find-cover.mjs` searches hundreds of autopilot runs in Node for the cover frame and writes its seed and step into `shots.json` (the game's `?shot=play` replays exactly that step).
 
 ## Run it
 

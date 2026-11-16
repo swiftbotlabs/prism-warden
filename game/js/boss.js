@@ -1,13 +1,13 @@
-// THE ECLIPSE, the wave-10 boss: three phases that change its colour, orbit and summons, with a slow-motion beat at each break.
+// THE ECLIPSE, the wave-10 boss: three phases with their own colour and orbit, minion legions from the edges, and a telegraphed Shadow Ring.
 import { ARENA_W, AZURE, CORE_X, CORE_Y, EMBER, LIGHTS, TAU, WHITE } from './config.js';
-import { createShade } from './shades.js';
+import { createShade, edgeSpawnPoint } from './shades.js';
 import { simRandom } from './random.js';
 
-/** Boss phases: each one's name, shell colour (-1 = cycles), health, orbit, what it summons how often, and its one-line description. */
+/** Boss phases: shell colour (-1 = cycles), health, orbit, the legion it calls from the edges and how often, its Shadow Ring. */
 export const ECLIPSE_PHASES = [
-  { name: 'UMBRA', colour: EMBER, hp: 30, orbitSpeed: 0.2, radius: 300, summon: 'drifters', every: 3.4, blurb: 'Ember shell · summons Drifters' },
-  { name: 'PENUMBRA', colour: AZURE, hp: 36, orbitSpeed: 0.32, radius: 285, summon: 'darterRing', every: 4.4, blurb: 'Azure shell · rings of Darters' },
-  { name: 'TOTALITY', colour: -1, hp: 44, orbitSpeed: 0.4, radius: 250, summon: 'splitters', every: 4.6, blurb: 'colour shifts · Splitters · closes in' },
+  { name: 'UMBRA', colour: EMBER, hp: 30, orbitSpeed: 0.2, radius: 300, legion: ['drifter', 'drifter', 'darter'], every: 5, ring: 8, blurb: 'Ember shell · Drifter legions' },
+  { name: 'PENUMBRA', colour: AZURE, hp: 36, orbitSpeed: 0.32, radius: 285, legion: ['darter', 'drifter', 'darter', 'prismling'], every: 5.5, ring: 10, blurb: 'Azure shell · Darter legions' },
+  { name: 'TOTALITY', colour: -1, hp: 44, orbitSpeed: 0.4, radius: 250, legion: ['splitter', 'darter', 'prismling', 'drifter', 'darter'], every: 6, ring: 12, blurb: 'colour shifts · rings of shadow' },
 ];
 /** Breaks the current phase: the next one starts at full health with its own colour, orbit and summons. */
 export function nextEclipsePhase(boss) {
@@ -43,7 +43,8 @@ export function createEclipse() {
   boss.orbit = -Math.PI / 2;
   boss.orbitRadius = 300;
   boss.summonTimer = 2.5;
-  boss.orbTimer = 5;
+  boss.ringTimer = 7;
+  boss.charging = 0;
   boss.entering = 2.2;
   boss.broken = 0;
   return boss;
@@ -75,33 +76,43 @@ export function updateEclipse(world, boss, dt) {
   boss.summonTimer -= dt;
   if (boss.summonTimer <= 0) {
     boss.summonTimer = phase.every;
-    summonMinions(world, boss, phase.summon);
+    summonLegion(world, phase.legion);
   }
-  boss.orbTimer -= dt;
-  if (boss.orbTimer <= 0) {
-    boss.orbTimer = 3.2 - boss.phase * 0.5;
-    const orb = createShade('shard', WHITE, boss.x, boss.y, 1.3 + boss.phase * 0.15, false);
-    world.shades.push(orb);
+  boss.ringTimer -= dt;
+  if (boss.ringTimer <= 0 && boss.charging <= 0) {
+    boss.charging = CHARGE_TIME;
+    boss.ringTimer = 9 - boss.phase;
+    world.events.push({ type: 'boss' });
+    world.log.push({ text: 'Shadow Ring!', colour: '#c9a0ff', time: world.time });
+  }
+  if (boss.charging > 0) {
+    boss.charging -= dt;
+    if (boss.charging <= 0) releaseShadowRing(world, boss, phase.ring);
   }
 }
 
-function summonMinions(world, boss, pattern) {
-  const speed = world.speedScale;
-  if (pattern === 'drifters') {
-    for (let i = 0; i < 2; i += 1) {
-      const angle = boss.rot + i * Math.PI;
-      world.shades.push(createShade('drifter', Math.floor(simRandom() * 3), boss.x + Math.cos(angle) * 70, boss.y + Math.sin(angle) * 70, speed, false, world.toughness));
-    }
-  } else if (pattern === 'darterRing') {
-    for (let i = 0; i < 5; i += 1) {
-      const angle = boss.rot + (i / 5) * TAU;
-      world.shades.push(createShade('darter', i % 3, boss.x + Math.cos(angle) * 72, boss.y + Math.sin(angle) * 72, speed, false, world.toughness));
-    }
-  } else {
-    const colour = (boss.colour + 1 + Math.floor(simRandom() * 2)) % 3;
-    world.shades.push(createShade('splitter', colour, boss.x, boss.y, speed, false, world.toughness));
-    world.shades.push(createShade('prismling', (colour + 1) % 3, boss.x + 40, boss.y, speed, false, world.toughness));
+/** Seconds the Shadow Ring is telegraphed (the boss darkens and its halo tightens) before it is released. */
+export const CHARGE_TIME = 1.5;
+
+/** A legion of minions from the arena edges, spread round the field, their colours rotating through all three lights. */
+function summonLegion(world, kinds) {
+  const offset = Math.floor(simRandom() * 3);
+  kinds.forEach((kind, i) => {
+    const point = edgeSpawnPoint(simRandom);
+    world.shades.push(createShade(kind, (offset + i) % 3, point.x, point.y, world.speedScale, false, world.toughness));
+  });
+}
+
+/** The Shadow Ring: Umbra orbs fly out from the boss in every direction; any light cuts them, and those reaching the Core crack it. */
+function releaseShadowRing(world, boss, count) {
+  for (let i = 0; i < count; i += 1) {
+    const angle = boss.rot + (i / count) * TAU;
+    const orb = createShade('umbra', WHITE, boss.x + Math.cos(angle) * (boss.r + 8), boss.y + Math.sin(angle) * (boss.r + 8), 1, false, world.toughness);
+    orb.vx = Math.cos(angle) * orb.speed;
+    orb.vy = Math.sin(angle) * orb.speed;
+    world.shades.push(orb);
   }
+  world.events.push({ type: 'phase' });
 }
 
 /** The name and colour label the HUD shows above the boss bar. */

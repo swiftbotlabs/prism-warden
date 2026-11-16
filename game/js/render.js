@@ -4,6 +4,7 @@ import { drawLightGlyph, traceShape } from './icons.js';
 import { drawFloaters, drawParticles } from './particles.js';
 import { PRISMLING_PERIOD } from './shades.js';
 import { drawFloor } from './floor.js';
+import { CHARGE_TIME } from './boss.js';
 
 const glowSprites = new Map();
 
@@ -238,6 +239,10 @@ function drawMotes(ctx, motes) {
 
 /** One Shade: glow in its colour, a dark body inside a shell of its colour's shape, a slit eye watching the Core. */
 function drawShade(ctx, shade, time) {
+  if (shade.kind === 'umbra') {
+    drawUmbra(ctx, shade);
+    return;
+  }
   const light = LIGHTS[shade.colour];
   const fade = Math.min(1, shade.age * 2.5);
   const { x, y, r } = shade;
@@ -364,6 +369,7 @@ export function drawEclipse(ctx, boss, time, { label = true, fallen = false } = 
   const light = LIGHTS[boss.colour];
   const { x, y, r } = boss;
   const power = fallen ? 0.3 : 1;
+  if (boss.charging > 0) drawShadowCharge(ctx, boss, time);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   drawGlow(ctx, x, y, r * 3.2, light.rgb, 0.75 * power);
@@ -441,6 +447,39 @@ function drawEclipseCracks(ctx, x, y, r) {
     ctx.lineWidth = 2;
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+/** A Shadow Ring orb: a dark violet sphere with a pale rim, flying straight out from THE ECLIPSE. */
+function drawUmbra(ctx, orb) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  drawGlow(ctx, orb.x, orb.y, orb.r * 3, '150,80,255', 0.55);
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(orb.x, orb.y, orb.r, 0, TAU);
+  ctx.fillStyle = '#12051f';
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = orb.flash > 0 ? '#ffffff' : '#d9b8ff';
+  ctx.stroke();
+}
+
+/** The Shadow Ring telegraph: the ground darkens round THE ECLIPSE and a ring of shadow tightens onto it before release. */
+function drawShadowCharge(ctx, boss, time) {
+  const k = 1 - boss.charging / CHARGE_TIME;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(boss.x, boss.y, boss.r * 2.2, 0, TAU);
+  ctx.fillStyle = `rgba(8,0,20,${(0.12 + 0.2 * k).toFixed(2)})`;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(boss.x, boss.y, boss.r * (2.6 - 1.2 * k), 0, TAU);
+  ctx.strokeStyle = `rgba(200,150,255,${(0.4 + 0.5 * k).toFixed(2)})`;
+  ctx.lineWidth = 4;
+  ctx.setLineDash([14, 10]);
+  ctx.lineDashOffset = time * 40;
+  ctx.stroke();
   ctx.restore();
 }
 

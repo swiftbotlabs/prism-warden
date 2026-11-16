@@ -58,31 +58,6 @@ export function drawHud(ctx, world, best, time, muted) {
   if (world.banner) drawWaveBanner(ctx, world.banner);
 }
 
-/** The screen areas the HUD covers this frame ({x, y, w, h}), so screenshots can keep Shades out from under panels. */
-export function hudPanelRects(world) {
-  const rects = [
-    { x: 16, y: 14, w: 320, h: 90 },
-    { x: ARENA_W / 2 - 180, y: 14, w: 360, h: 90 },
-    { x: ARENA_W / 2 - 290, y: 108, w: 580, h: 36 },
-    { x: ARENA_W - 316, y: 14, w: 300, h: 80 },
-    { x: ARENA_W / 2 - 220, y: ARENA_H - 107, w: 440, h: 30 },
-    { x: ARENA_W / 2 - 238, y: ARENA_H - 62, w: 476, h: 46 },
-    { x: ARENA_W - 300, y: ARENA_H - 34, w: 284, h: 24 },
-  ];
-  if (world.log.some((entry) => world.time - entry.time < 5)) rects.push({ x: 16, y: 112, w: 330, h: 90 });
-  if (world.director && world.state === 'fight') {
-    const rows = Math.max(1, Math.min(6, incomingByKind(world).length));
-    rects.push({ x: ARENA_W - 252, y: 102, w: 236, h: 40 + rows * 28 });
-  }
-  const owned = UPGRADES.filter((upgrade) => world.upgrades[upgrade.id] > 0).length;
-  if (owned > 0) {
-    const rows = Math.ceil(owned / 3);
-    rects.push({ x: 16, y: ARENA_H - 46 - (rows - 1) * 34 - 22, w: 3 * 122, h: (rows - 1) * 34 + 52 });
-  }
-  if (world.boss && !world.boss.dead) rects.push({ x: ARENA_W / 2 - 250, y: 150, w: 500, h: 46 });
-  return rects;
-}
-
 /** CORE n / max, its bar, shields, and the stakes: at 0 the run is lost. */
 function drawCorePanel(ctx, world, time) {
   const core = world.core;

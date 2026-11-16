@@ -9,6 +9,7 @@ export const SHADE_KINDS = {
   shard: { label: 'Shard', radius: 10, hp: 0.7, speed: 74, value: 5, coreDamage: 1 },
   prismling: { label: 'Prismling', radius: 16, hp: 2.4, speed: 50, value: 25, coreDamage: 1 },
   bulwark: { label: 'Bulwark', radius: 29, hp: 2.6, speed: 25, value: 60, coreDamage: 3, shellHp: 2.2 },
+  umbra: { label: 'Umbra', radius: 11, hp: 0.5, speed: 85, value: 5, coreDamage: 1 },
   eclipse: { label: 'The Eclipse', radius: 60, hp: 1, speed: 0, value: 0, coreDamage: 0 },
 };
 
@@ -91,6 +92,12 @@ export function moveShades(shades, dt) {
     if (shade.dead || shade.kind === 'eclipse') continue;
     shade.age += dt;
     shade.flash = Math.max(0, shade.flash - dt);
+    if (shade.kind === 'umbra') {
+      shade.x += shade.vx * dt;
+      shade.y += shade.vy * dt;
+      if (shade.x < -60 || shade.x > ARENA_W + 60 || shade.y < -60 || shade.y > ARENA_H + 60) shade.dead = true;
+      continue;
+    }
     const dx = CORE_X - shade.x;
     const dy = CORE_Y - shade.y;
     const distance = Math.hypot(dx, dy) || 1;

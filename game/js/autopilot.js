@@ -12,6 +12,7 @@ function mostUrgentShade(world, bossFocus) {
   for (const shade of world.shades) {
     if (shade.dead) continue;
     if (shade.x < -10 || shade.x > 1290 || shade.y < -10 || shade.y > 810) continue;
+    if (shade.kind === 'umbra' && shade.vx * (CORE_X - shade.x) + shade.vy * (CORE_Y - shade.y) < 0) continue;
     let eta = (Math.hypot(shade.x - CORE_X, shade.y - CORE_Y) - 40) / Math.max(20, shade.speed);
     if (shade.kind === 'eclipse') eta = shade.entering > 0 ? Infinity : bossFocus ? 3.5 : 25;
     if (shade.kind === 'bulwark') eta *= 0.8;
