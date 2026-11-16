@@ -265,8 +265,8 @@ function drawEclipsePreview(ctx, time) {
   boss.colour = Math.floor(time / 2.6) % 3;
   ctx.save();
   ctx.translate(cx - 290, 192);
-  ctx.scale(0.82, 0.82);
-  drawEclipse(ctx, boss, time, { label: false });
+  ctx.scale(0.55, 0.55);
+  drawEclipse(ctx, boss, time);
   ctx.restore();
   const left = cx - 160;
   text(ctx, 'NEXT: THE ECLIPSE', left, 136, 34, PALETTE.gold, 'left', 900);
@@ -368,8 +368,8 @@ function drawFallenEclipse(ctx, x, y, time) {
   boss.colour = 0;
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(0.62, 0.62);
-  drawEclipse(ctx, boss, time, { label: false, fallen: true });
+  ctx.scale(0.42, 0.42);
+  drawEclipse(ctx, boss, time, { fallen: true });
   ctx.restore();
 }
 

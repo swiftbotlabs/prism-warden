@@ -2,7 +2,7 @@
 // the best seed and step into shots.json for 1-play.jpg (the game's ?shot=play replays exactly that step in the browser).
 // Usage: node tools/find-cover.mjs [boss|wave] [runs]
 import { readFileSync, writeFileSync } from 'node:fs';
-import { ARENA_H, ARENA_W, CORE_X, CORE_Y, WHITE } from '../game/js/config.js';
+import { ARENA_H, ARENA_W, CORE_RADIUS, CORE_X, CORE_Y, WHITE } from '../game/js/config.js';
 import { createPilot } from '../game/js/autopilot.js';
 import { playUntil } from '../game/js/shots.js';
 import { clearEffects, floatersNear } from '../game/js/particles.js';
@@ -68,23 +68,32 @@ function branchStrikes(world) {
 
 function bossDrama(world) {
   const boss = world.boss;
-  if (world.state !== 'fight' || world.banner || !boss || boss.dead || boss.entering > 0 || world.director.elapsed < 15 || world.combo < 5) return -1;
+  if (world.state !== 'fight' || world.banner || !boss || boss.dead || boss.entering > 0 || world.director.elapsed < 15 || world.combo < 3) return -1;
   const health = (ECLIPSE_PHASES.length - 1 - boss.phase + boss.hp / boss.maxHp) / ECLIPSE_PHASES.length;
   const main = world.beams[0];
-  if (health < 0.35 || health > 0.65 || world.core.hp < world.core.maxHp * 0.5 || !main || main.colour !== boss.colour || !main.hits.some((hit) => hit.shade === boss)) return -1;
-  const bounces = world.beams.reduce((sum, beam) => sum + beam.bounces.length / 2, 0);
-  const struck = branchStrikes(world);
-  if (world.beams.length < 2 || bounces < 2 || struck.size < 1) return -1;
+  if (health < 0.3 || health > 0.7 || world.core.hp < world.core.maxHp * 0.5 || !main || main.colour !== boss.colour || !main.hits.some((hit) => hit.shade === boss)) return -1;
+  // The boss in the middle 60% of the arena, with open floor between it and the Core.
+  if (boss.x < ARENA_W * 0.2 || boss.x > ARENA_W * 0.8 || boss.y < ARENA_H * 0.2 || boss.y > ARENA_H * 0.8) return -1;
+  const coreGap = Math.hypot(boss.x - CORE_X, boss.y - CORE_Y) - boss.r - CORE_RADIUS;
+  if (coreGap < 140) return -1;
+  // The threat: a Shadow Ring burst in flight, or the ring tightening.
+  const orbs = world.shades.filter((s) => s.kind === 'umbra' && !s.dead && s.x > 0 && s.x < ARENA_W && s.y > 0 && s.y < ARENA_H).length;
+  if (orbs < 4 && boss.charging <= 0) return -1;
+  // The response: Prism branches bouncing at least twice and harming minions of the other colours.
+  const branchBounces = world.beams.slice(1).reduce((sum, beam) => sum + beam.bounces.length / 2, 0);
+  const struck = [...branchStrikes(world)].filter((c) => c !== boss.colour);
+  if (world.beams.length < 2 || branchBounces < 2 || struck.length < 1) return -1;
   const popups = floatersNear(CORE_X, CORE_Y, 2000);
   const minions = visibleMinions(world);
   const colours = new Set(minions.map((s) => s.colour).filter((c) => c !== WHITE)).size;
-  if (popups < 1 || popups > 2 || minions.length < 4 || colours < 2 || !framedClear(world)) return -1;
-  if (boss.y > 600 || boss.x < 140 || boss.x > 1140 || boss.y < 230) return -1;
-  if (world.shades.some((s) => s !== boss && !s.dead && Math.abs(s.x - boss.x) < 80 && Math.abs(s.y - boss.y - boss.r - 34) < 22)) return -1;
-  const orbs = world.shades.filter((s) => s.kind === 'umbra' && !s.dead && s.x > 0 && s.x < ARENA_W && s.y > 0 && s.y < ARENA_H).length;
-  return Math.min(minions.length, 12) * 2 + colours * 4 + struck.size * 5 + Math.min(bounces, 4) * 3 + world.beams.length * 4
-    + (popups === 1 ? 6 : 0) + (world.core.hp / world.core.maxHp) * 10 + Math.min(orbs, 8) * 2.5 + Math.min(world.combo, 20) / 2
-    + (1 - Math.abs(health - 0.5)) * 6;
+  if (popups < 1 || popups > 3 || minions.length < 3 || colours < 2 || !framedClear(world)) return -1;
+  // A clear triangle: boss, Warden and Core apart, with open floor on every side.
+  const w = world.warden;
+  const shortest = Math.min(Math.hypot(w.x - boss.x, w.y - boss.y) - boss.r, Math.hypot(w.x - CORE_X, w.y - CORE_Y) - CORE_RADIUS, coreGap);
+  if (shortest < 70) return -1;
+  return Math.min(minions.length, 10) * 2 + colours * 4 + struck.length * 6 + Math.min(branchBounces, 4) * 3 + world.beams.length * 3
+    + (popups === 1 ? 6 : 0) + (world.core.hp / world.core.maxHp) * 8 + Math.min(orbs, 10) * 2 + (boss.charging > 0 ? 6 : 0)
+    + Math.min(shortest, 260) / 15 + Math.min(world.combo, 20) / 2 + (1 - Math.abs(health - 0.5)) * 6;
 }
 
 function waveDrama(world) {

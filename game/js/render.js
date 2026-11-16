@@ -54,6 +54,7 @@ export function drawWorld(ctx, world, time, showReticle = true) {
   drawBeams(ctx, world.beams, time);
   if (world.state !== 'lost') drawWarden(ctx, world.warden, time);
   drawParticles(ctx);
+  if (world.boss && !world.boss.dead && world.boss.entering <= 0) drawEclipseLabel(ctx, world.boss);
   drawFloaters(ctx, FONT);
   ctx.restore();
   if (showReticle && (world.state === 'fight' || world.state === 'cleared')) drawReticle(ctx, world.warden, time);
@@ -365,14 +366,15 @@ function drawBulwark(ctx, shade, time) {
 }
 
 /** THE ECLIPSE: a black sun with a corona in its phase colour; `fallen` draws it dimmed and cracked for the victory screen. */
-export function drawEclipse(ctx, boss, time, { label = true, fallen = false } = {}) {
+export function drawEclipse(ctx, boss, time, { fallen = false } = {}) {
   const light = LIGHTS[boss.colour];
   const { x, y, r } = boss;
   const power = fallen ? 0.3 : 1;
   if (boss.charging > 0) drawShadowCharge(ctx, boss, time);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  drawGlow(ctx, x, y, r * 3.2, light.rgb, 0.75 * power);
+  drawGlow(ctx, x, y, r * 3, light.rgb, power);
+  drawGlow(ctx, x, y, r * 1.6, '255,255,255', 0.35 * power);
   ctx.beginPath();
   for (let i = 0; i < 16; i += 1) {
     const angle = boss.rot + (i / 16) * TAU;
@@ -380,8 +382,8 @@ export function drawEclipse(ctx, boss, time, { label = true, fallen = false } = 
     ctx.moveTo(x + Math.cos(angle) * r * 0.95, y + Math.sin(angle) * r * 0.95);
     ctx.lineTo(x + Math.cos(angle + 0.06) * length, y + Math.sin(angle + 0.06) * length);
   }
-  ctx.strokeStyle = `rgba(${light.rgb},${0.8 * power})`;
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = `rgba(${light.rgb},${power})`;
+  ctx.lineWidth = 6;
   ctx.stroke();
   if (boss.broken > 0) {
     ctx.beginPath();
@@ -404,7 +406,7 @@ export function drawEclipse(ctx, boss, time, { label = true, fallen = false } = 
   ctx.stroke();
   for (let i = 0; i < 3; i += 1) {
     const angle = -boss.rot * 1.5 + (i / 3) * TAU;
-    drawLightGlyph(ctx, boss.colour, x + Math.cos(angle) * r * 0.62, y + Math.sin(angle) * r * 0.62, 9);
+    drawLightGlyph(ctx, boss.colour, x + Math.cos(angle) * r * 0.62, y + Math.sin(angle) * r * 0.62, r * 0.15);
   }
   ctx.beginPath();
   ctx.ellipse(x, y, r * 0.34, fallen ? r * 0.025 : r * 0.1, 0, 0, TAU);
@@ -417,11 +419,24 @@ export function drawEclipse(ctx, boss, time, { label = true, fallen = false } = 
     drawGlow(ctx, x, y, r * 1.5, '255,255,255', boss.flash * 5);
     ctx.restore();
   }
-  if (!label) return;
-  ctx.font = `800 15px ${FONT}`;
+}
+
+/** THE ECLIPSE's name on its own dark plate above the corona, drawn after the beams so nothing crosses it. */
+function drawEclipseLabel(ctx, boss) {
+  const y = boss.y - boss.r * 1.75;
+  ctx.font = `900 17px ${FONT}`;
+  const width = ctx.measureText('THE ECLIPSE').width + 24;
+  ctx.beginPath();
+  ctx.roundRect(boss.x - width / 2, y - 13, width, 26, 13);
+  ctx.fillStyle = 'rgba(8,5,22,0.85)';
+  ctx.fill();
+  ctx.strokeStyle = LIGHTS[boss.colour].hex;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(236,233,255,0.85)';
-  ctx.fillText('THE ECLIPSE', x, y + r + 34);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('THE ECLIPSE', boss.x, y + 1);
 }
 
 /** Broken THE ECLIPSE: a dark veil over the body and jagged cracks with light leaking through them. */
