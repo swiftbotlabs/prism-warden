@@ -1,35 +1,31 @@
-// Casts the Warden's light: traces each beam through mirrors and walls, fans out Prism branches and records the Shades it strikes.
+// Light maths: reflection off mirrors and walls, the Prism split into coloured branches, and the ray trace that finds Shade hits.
 import { ARENA_H, ARENA_W, BEAM_TUNING, CORE_RADIUS, CORE_X, CORE_Y } from './config.js';
 import { partStruck } from './shades.js';
 import { beamStats } from './upgrades.js';
 
-/**
- * Prism splitting: every beam the Warden casts this step: the main beam in the chosen colour, then one Prism branch per level,
- * each in the next colour round the spectrum, fanned out to alternate sides at reduced power.
- */
-export function castPrismBeams(world, originX, originY, aimX, aimY, colour, levels) {
-  const stats = beamStats(levels);
-  const angle = Math.atan2(aimY - originY, aimX - originX);
-  const beams = [traceReflectingBeam(world, originX, originY, angle, colour, 1, stats)];
-  for (let i = 1; i <= stats.branches; i += 1) {
-    const side = i % 2 === 1 ? 1 : -1;
-    const branchAngle = angle + side * BEAM_TUNING.branchSpread * Math.ceil(i / 2);
-    beams.push(traceReflectingBeam(world, originX, originY, branchAngle, (colour + i) % 3, BEAM_TUNING.branchPower, stats));
-  }
-  return beams;
-}
-
-/** Reflection: mirrors (and walls, with Reflect) bounce the beam like light, angle in equals angle out about the normal. */
+/** Reflection: angle in equals angle out about the surface normal (mirrors always, walls with Reflect). */
 export function reflectDirection(dx, dy, nx, ny) {
   const dot = dx * nx + dy * ny;
   return { dx: dx - 2 * dot * nx, dy: dy - 2 * dot * ny };
 }
 
-/**
- * Follows one ray from (x, y): it reflects off mirror shards (always) and arena walls (one bounce per Reflect level),
- * stops at the Core, and stops at the first Shade it touches unless Lance lets it pierce.
- * Returns the polyline it drew, the bounce points and every Shade hit with the part struck.
- */
+/** Prism split: the main beam in the chosen colour, then one weaker branch per Prism level in the next colours. */
+export function castPrismBeams(world, originX, originY, aimX, aimY, colour, levels) {
+  const stats = beamStats(levels);
+  const angle = Math.atan2(aimY - originY, aimX - originX);
+  const beams = [traceReflectingBeam(world, originX, originY, angle, colour, 1, stats)];
+  for (let i = 1; i <= stats.branches; i += 1) {
+    beams.push(traceReflectingBeam(world, originX, originY, splitAngle(angle, i), (colour + i) % 3, BEAM_TUNING.branchPower, stats));
+  }
+  return beams;
+}
+
+/** Direction of Prism branch `index` (1, 2, ...): alternate sides of the main beam, wider with each pair. */
+export function splitAngle(angle, index) {
+  return angle + (index % 2 === 1 ? 1 : -1) * BEAM_TUNING.branchSpread * Math.ceil(index / 2);
+}
+
+/** Traces one ray: it bounces off mirrors (walls with Reflect) and stops at the Core or the first Shade unless Lance pierces. */
 export function traceReflectingBeam(world, x, y, angle, colour, power, stats) {
   let dx = Math.cos(angle);
   let dy = Math.sin(angle);

@@ -9,13 +9,16 @@ export const ECLIPSE_PHASES = [
   { name: 'PENUMBRA', colour: AZURE, hp: 36, orbitSpeed: 0.32, radius: 285, summon: 'darterRing', every: 4.4, blurb: 'Azure shell · rings of Darters' },
   { name: 'TOTALITY', colour: -1, hp: 44, orbitSpeed: 0.4, radius: 250, summon: 'splitters', every: 4.6, blurb: 'colour shifts · Splitters · closes in' },
 ];
-/** Seconds between colour shifts in the cycling phase. */
-const TOTALITY_SHIFT = 2.6;
+/** Breaks the current phase: the next one starts at full health with its own colour, orbit and summons. */
+export function nextEclipsePhase(boss) {
+  boss.phase += 1;
+  boss.hp = ECLIPSE_PHASES[boss.phase].hp;
+  boss.maxHp = boss.hp;
+  boss.broken = 1.2;
+  boss.summonTimer = 1.5;
+}
 
-/**
- * Deals damage to THE ECLIPSE. Returns 'hit', 'phase' when a phase breaks (the next one begins at full health)
- * or 'dead' when the last one does.
- */
+/** Damages THE ECLIPSE: returns 'hit', 'phase' when a phase breaks, or 'dead' when the last one does. */
 export function damageEclipsePhase(boss, amount) {
   if (boss.entering > 0) return 'immune';
   boss.hp -= amount;
@@ -25,13 +28,12 @@ export function damageEclipsePhase(boss, amount) {
     boss.dead = true;
     return 'dead';
   }
-  boss.phase += 1;
-  boss.hp = ECLIPSE_PHASES[boss.phase].hp;
-  boss.maxHp = boss.hp;
-  boss.broken = 1.2;
-  boss.summonTimer = 1.5;
+  nextEclipsePhase(boss);
   return 'phase';
 }
+
+/** Seconds between colour shifts in the cycling phase. */
+const TOTALITY_SHIFT = 2.6;
 
 export function createEclipse() {
   const boss = createShade('eclipse', EMBER, ARENA_W / 2, -90, 1, true);

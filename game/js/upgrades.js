@@ -63,11 +63,6 @@ export function upgradeLabel(id, level) {
   return `${upgradeById(id).name} ${NUMERALS[level - 1] ?? level}`;
 }
 
-/** The owned build as one line, e.g. "Prism II · Reflect III · Lens I". */
-export function buildSummary(levels) {
-  return UPGRADES.filter((upgrade) => levels[upgrade.id] > 0).map((upgrade) => upgradeLabel(upgrade.id, levels[upgrade.id])).join(' · ');
-}
-
 export function upgradeById(id) {
   return UPGRADES.find((upgrade) => upgrade.id === id);
 }

@@ -133,11 +133,6 @@ export function updateEffects(dt) {
   }
 }
 
-/** The live floating texts' colours, for framing screenshots. */
-export function floaterColours() {
-  return new Set(floaters.filter((f) => f.live).map((f) => f.colour));
-}
-
 /** Floating texts whose centre is within `radius` of (x, y). */
 export function floatersNear(x, y, radius) {
   let count = 0;

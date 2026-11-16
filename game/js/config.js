@@ -25,9 +25,6 @@ export const LIGHTS = [
 ];
 
 export const PALETTE = {
-  ground: '#141039',
-  groundGlow: '#17143a',
-  grid: 'rgba(150,140,255,0.14)',
   ink: '#ece9ff',
   dim: '#9a94c8',
   faint: '#5d5890',

@@ -72,7 +72,3 @@ export function pushOutOfCore(body, radius) {
   body.y = CORE_Y + (dy / distance) * reach;
 }
 
-/** Distance from (x, y) to the Core's centre. */
-export function distanceToCore(x, y) {
-  return Math.hypot(x - CORE_X, y - CORE_Y);
-}

@@ -34,7 +34,7 @@ export const RUN_CONDITIONS = { win: `break THE ECLIPSE after wave ${TOTAL_WAVES
 /** The run's goal as the HUD states it: hold the waves, then break THE ECLIPSE on the last one to win. */
 export function waveGoalText(wave) {
   const left = TOTAL_WAVES - wave;
-  return left > 0 ? `HOLD ${left} MORE WAVE${left > 1 ? 'S' : ''} · THEN THE ECLIPSE` : 'BREAK THE ECLIPSE · WIN THE RUN';
+  return left > 0 ? `${left} WAVE${left > 1 ? 'S' : ''} TO THE ECLIPSE` : 'BREAK THE ECLIPSE';
 }
 
 /** A wave is cleared when nothing is left to spawn and no Shade (or boss) remains. */

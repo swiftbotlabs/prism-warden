@@ -1,11 +1,11 @@
-// Draws the arena scene: hex-grid ground, mirror shards, the Core crystal, Shades and the boss, motes, additive beams, the Warden and the reticle.
+// Draws the arena scene: the observatory floor, mirror shards, the Core crystal, Shades and the boss, motes, additive beams, the Warden and the reticle.
 import { ARENA_H, ARENA_W, CORE_RADIUS, CORE_X, CORE_Y, FONT, LIGHTS, PALETTE, TAU, WHITE } from './config.js';
 import { drawLightGlyph, traceShape } from './icons.js';
 import { drawFloaters, drawParticles } from './particles.js';
 import { PRISMLING_PERIOD } from './shades.js';
+import { drawFloor } from './floor.js';
 
 const glowSprites = new Map();
-let backdrop = null;
 
 /** A soft round light sprite in colour `rgb`, cached per colour. */
 function glowSprite(rgb) {
@@ -33,60 +33,6 @@ export function drawGlow(ctx, x, y, radius, rgb, alpha = 1) {
   ctx.globalAlpha = previous;
 }
 
-/** Pre-renders the ground (deep indigo with a lit centre, hex grid, soft vignette) at the screen's pixel ratio. */
-export function buildBackdrop(pixelRatio) {
-  backdrop = document.createElement('canvas');
-  backdrop.width = Math.round(ARENA_W * pixelRatio);
-  backdrop.height = Math.round(ARENA_H * pixelRatio);
-  const g = backdrop.getContext('2d');
-  g.scale(pixelRatio, pixelRatio);
-  g.fillStyle = PALETTE.ground;
-  g.fillRect(0, 0, ARENA_W, ARENA_H);
-  const halo = g.createRadialGradient(CORE_X, CORE_Y, 20, CORE_X, CORE_Y, 620);
-  halo.addColorStop(0, 'rgba(92,80,200,0.6)');
-  halo.addColorStop(0.5, 'rgba(52,44,140,0.32)');
-  halo.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = halo;
-  g.fillRect(0, 0, ARENA_W, ARENA_H);
-
-  const size = 30;
-  const w = size * Math.sqrt(3);
-  g.beginPath();
-  for (let row = -1; row * size * 1.5 < ARENA_H + size; row += 1) {
-    for (let col = -1; col * w < ARENA_W + w; col += 1) {
-      const cx = col * w + (row % 2 ? w / 2 : 0);
-      const cy = row * size * 1.5;
-      for (let i = 0; i < 6; i += 1) {
-        const angle = Math.PI / 6 + (i / 6) * TAU;
-        const px = cx + Math.cos(angle) * size;
-        const py = cy + Math.sin(angle) * size;
-        if (i === 0) g.moveTo(px, py);
-        else g.lineTo(px, py);
-      }
-      g.closePath();
-    }
-  }
-  g.strokeStyle = PALETTE.grid;
-  g.lineWidth = 1;
-  g.stroke();
-
-  for (let i = 0; i < 140; i += 1) {
-    const x = (i * 397.13) % ARENA_W;
-    const y = (i * 211.7 + (i % 7) * 53) % ARENA_H;
-    g.fillStyle = `rgba(200,190,255,${0.08 + (i % 5) * 0.04})`;
-    g.fillRect(x, y, 1.5, 1.5);
-  }
-  const vignette = g.createRadialGradient(ARENA_W / 2, ARENA_H / 2, 300, ARENA_W / 2, ARENA_H / 2, 820);
-  vignette.addColorStop(0, 'rgba(0,0,0,0)');
-  vignette.addColorStop(1, 'rgba(4,2,16,0.38)');
-  g.fillStyle = vignette;
-  g.fillRect(0, 0, ARENA_W, ARENA_H);
-}
-
-export function drawBackdrop(ctx) {
-  if (backdrop) ctx.drawImage(backdrop, 0, 0, ARENA_W, ARENA_H);
-}
-
 /** The whole play scene for one frame. `time` animates idle motion; `showReticle` draws the aim cursor. */
 export function drawWorld(ctx, world, time, showReticle = true) {
   ctx.save();
@@ -94,10 +40,10 @@ export function drawWorld(ctx, world, time, showReticle = true) {
     const s = world.shake * 0.6;
     ctx.translate(Math.sin(time * 91) * s, Math.cos(time * 77) * s);
   }
-  drawBackdrop(ctx);
+  drawFloor(ctx);
   for (const mirror of world.mirrors) drawMirror(ctx, mirror, time);
   if (world.state === 'won') drawVictoryRays(ctx, time, Math.min(1, world.stateTime / 1.5));
-  drawCore(ctx, world.core, time, world.state === 'lost' ? world.stateTime : 0);
+  drawCore(ctx, world.core, time, world.state === 'lost' ? world.stateTime : 0, world.wave ?? 10);
   drawMotes(ctx, world.motes);
   for (const shade of world.shades) {
     if (shade.dead) continue;
@@ -167,11 +113,52 @@ function drawMirror(ctx, mirror, time) {
   const glint = ((time * 0.35 + mirror.cx * 0.001) % 1) * 2 - 1;
   drawGlow(ctx, mirror.cx + ux * glint, mirror.cy + uy * glint, 14, '255,255,255', 0.7);
   if (mirror.glow > 0) drawGlow(ctx, mirror.cx, mirror.cy, 40, PALETTE.mirror, mirror.glow * 0.4);
+  ctx.globalCompositeOperation = 'source-over';
+  for (const end of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(mirror.cx + ux * end, mirror.cy + uy * end, 7, 0, TAU);
+    ctx.fillStyle = '#c79a4a';
+    ctx.fill();
+    ctx.strokeStyle = '#3a2a10';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
+/** The dais runes: one lights for each wave reached, so the floor itself counts down to THE ECLIPSE. */
+function drawDaisRunes(ctx, wave, time) {
+  for (let i = 0; i < 10; i += 1) {
+    const a = -Math.PI / 2 + (i / 10) * TAU;
+    const x = CORE_X + Math.cos(a) * 73;
+    const y = CORE_Y + Math.sin(a) * 73;
+    const lit = i < wave;
+    if (lit) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      drawGlow(ctx, x, y, 16, '255,212,110', 0.45 + 0.15 * Math.sin(time * 3 + i));
+      ctx.restore();
+    }
+    const bits = (i * 7 + 3) % 8;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a + Math.PI / 2);
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(0, 6);
+    if (bits & 1) { ctx.moveTo(0, -6); ctx.lineTo(4, -2); }
+    if (bits & 2) { ctx.moveTo(0, 0); ctx.lineTo(-4, 3); }
+    if (bits & 4) { ctx.moveTo(-3, 6); ctx.lineTo(3, 6); }
+    ctx.strokeStyle = lit ? '#ffe2a0' : 'rgba(12,8,30,0.85)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 /** The Core: a faceted crystal whose glow, cracks, shield ring and tint show its health. */
-function drawCore(ctx, core, time, shatter) {
+function drawCore(ctx, core, time, shatter, wave) {
+  drawDaisRunes(ctx, wave, time);
   const ratio = core.hp / core.maxHp;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -372,10 +359,7 @@ function drawBulwark(ctx, shade, time) {
   ctx.fill();
 }
 
-/**
- * THE ECLIPSE: a black sun with a corona of rays in its phase colour and orbiting colour glyphs. Used in play, for the
- * "NEXT: THE ECLIPSE" preview after wave 9, and (with `fallen`) dimmed and cracked on the victory screen.
- */
+/** THE ECLIPSE: a black sun with a corona in its phase colour; `fallen` draws it dimmed and cracked for the victory screen. */
 export function drawEclipse(ctx, boss, time, { label = true, fallen = false } = {}) {
   const light = LIGHTS[boss.colour];
   const { x, y, r } = boss;

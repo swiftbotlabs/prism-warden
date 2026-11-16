@@ -1,5 +1,4 @@
-// The in-play HUD, written to teach the game at a glance: Core health and the stakes, wave goal and progress, score and combo,
-// what is still INCOMING, the colour rule, the colour selector, the named build, an event log, hints and banners.
+// The in-play HUD that teaches at a glance: Core and stakes, WIN/LOSE, wave goal, score, INCOMING, colour rule, build, event log.
 import { ARENA_H, ARENA_W, COMBO_TUNING, FONT, LIGHTS, PALETTE, TOTAL_WAVES } from './config.js';
 import { drawLightGlyph, drawShadeIcon, drawUpgradeIcon, traceShape } from './icons.js';
 import { upgradeLabel, UPGRADES } from './upgrades.js';
@@ -59,17 +58,14 @@ export function drawHud(ctx, world, best, time, muted) {
   if (world.banner) drawWaveBanner(ctx, world.banner);
 }
 
-/**
- * The screen areas the HUD covers this frame, as {x, y, w, h}: used to frame screenshots so no Shade hides under a panel.
- * Sizes follow the drawing code below (text-sized panels are given their widest extent).
- */
+/** The screen areas the HUD covers this frame ({x, y, w, h}), so screenshots can keep Shades out from under panels. */
 export function hudPanelRects(world) {
   const rects = [
     { x: 16, y: 14, w: 320, h: 90 },
     { x: ARENA_W / 2 - 180, y: 14, w: 360, h: 90 },
     { x: ARENA_W / 2 - 290, y: 108, w: 580, h: 36 },
     { x: ARENA_W - 316, y: 14, w: 300, h: 80 },
-    { x: ARENA_W / 2 - 300, y: ARENA_H - 107, w: 600, h: 30 },
+    { x: ARENA_W / 2 - 220, y: ARENA_H - 107, w: 440, h: 30 },
     { x: ARENA_W / 2 - 238, y: ARENA_H - 62, w: 476, h: 46 },
     { x: ARENA_W - 300, y: ARENA_H - 34, w: 284, h: 24 },
   ];
@@ -191,9 +187,8 @@ function drawIncomingPanel(ctx, world) {
     const colours = row.kind === 'bulwark' ? [0, 1, 2] : [...row.colours].sort();
     drawShadeIcon(ctx, row.kind, colours[0] === 3 && colours.length > 1 ? colours[1] : colours[0], x + 24, ry, 8);
     const label = row.kind === 'eclipse' ? 'THE ECLIPSE' : SHADE_KINDS[row.kind].label;
-    text(ctx, label, x + 44, ry, 16, '#ffffff', 'left', 800);
-    if (row.kind !== 'eclipse') colours.forEach((colour, i) => drawLightGlyph(ctx, colour, x + 152 + i * 14, ry, 5));
-    text(ctx, `x${row.count}`, x + width - 14, ry, 18, PALETTE.ink, 'right', 900);
+    text(ctx, `${label} x${row.count}`, x + 44, ry, 17, '#ffffff', 'left', 800);
+    if (row.kind !== 'eclipse') colours.forEach((colour, i) => drawLightGlyph(ctx, colour, x + width - 18 - i * 14, ry, 5));
   });
 }
 
@@ -215,9 +210,9 @@ function drawEventLog(ctx, world) {
 
 /** The one rule, by the colour bar: each beam colour harms the Shade shell of that colour and shape; white takes any. */
 function drawRuleStrip(ctx) {
-  const lead = 'MATCH THE BEAM TO THE SHADE';
+  const lead = 'MATCH COLOUR';
   const pairWidth = 52;
-  const tail = 'WHITE = ANY';
+  const tail = 'ANY';
   const width = textWidth(ctx, lead, 15, 900) + pairWidth * 3 + textWidth(ctx, tail, 14, 800) + 70;
   const x = ARENA_W / 2 - width / 2;
   const y = ARENA_H - 92;

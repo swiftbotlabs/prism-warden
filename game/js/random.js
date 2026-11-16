@@ -37,10 +37,6 @@ export function fxRange(min, max) {
   return min + (max - min) * fxNext();
 }
 
-export function simPick(list) {
-  return list[Math.floor(simNext() * list.length)];
-}
-
 /** Shuffles a list in place with the rules stream. */
 export function simShuffle(list) {
   for (let i = list.length - 1; i > 0; i -= 1) {

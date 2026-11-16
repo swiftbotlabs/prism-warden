@@ -2,7 +2,8 @@
 import { ARENA_H, ARENA_W, LIGHTS, PALETTE, STEP } from './config.js';
 import { createInput, movementAxes, takeClicks, takePresses, takeWheel } from './input.js';
 import { isMuted, playSound, setBeamHum, setMusicMood, setMuted, unlockAudio } from './audio.js';
-import { buildBackdrop, drawWorld } from './render.js';
+import { drawWorld } from './render.js';
+import { paintObservatoryFloor } from './floor.js';
 import { drawHud } from './hud.js';
 import { bossIsNext, cardAt, createTitleScene, drawPause, drawResults, drawTitle, drawUpgradeChoice, updateTitleScene } from './screens.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
@@ -44,7 +45,7 @@ function fitCanvas() {
   view.scale = Math.min(width / ARENA_W, height / ARENA_H);
   view.offsetX = (width - ARENA_W * view.scale) / 2;
   view.offsetY = (height - ARENA_H * view.scale) / 2;
-  buildBackdrop(ratio * view.scale);
+  paintObservatoryFloor(ratio * view.scale);
 }
 
 function toArena(clientX, clientY) {

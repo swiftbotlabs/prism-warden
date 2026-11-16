@@ -15,7 +15,7 @@ try {
   for (const shot of shots) {
     if (only.length && !only.includes(shot.name)) continue;
     await browser.navigate(`http://localhost:${port}/index.html${shot.query}`);
-    await browser.waitFor('window.__shotReady === true', 120000);
+    await browser.waitFor('window.__shotReady === true', 400000);
     const scene = await browser.evaluate('JSON.stringify(window.__shotScene)');
     let quality = 90;
     let bytes;

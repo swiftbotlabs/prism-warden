@@ -60,7 +60,7 @@ export function beginWave(world, number) {
   world.core.shield = world.upgrades.bastion;
   world.banner = { title: number === TOTAL_WAVES ? 'FINAL WAVE' : `WAVE ${number}`, sub: WAVE_PLAN[number - 1].title, time: 0 };
   world.events.push({ type: 'wave', wave: number });
-  logEvent(world, `Wave ${number} · ${WAVE_PLAN[number - 1].title}`, '#ffd46e');
+  logEvent(world, `Wave ${number} begins`, '#ffd46e');
 }
 
 /** Score multiplier from the current combo: x1, then +1 every five kills in a row, up to x8. */
@@ -163,7 +163,7 @@ function resolveCoreContacts(world) {
     if (world.core.shield > 0) {
       world.core.shield -= 1;
       world.events.push({ type: 'shield' });
-      logEvent(world, 'Shield took a hit', '#78dcff');
+      logEvent(world, 'Shield hit', '#78dcff');
       burst(shade.x, shade.y, '120,220,255', 30, 260, 0.6, 3);
       continue;
     }
@@ -215,7 +215,7 @@ function applyBeams(world, dt) {
         segment.hp -= amount;
         if (segment.hp <= 0 && !segment.broken) {
           segment.broken = true;
-          logEvent(world, `Bulwark ${LIGHTS[segment.colour].name} shell broken`, LIGHTS[segment.colour].hex);
+          logEvent(world, `${LIGHTS[segment.colour].name} shell broken`, LIGHTS[segment.colour].hex);
           burst(hit.x, hit.y, LIGHTS[segment.colour].rgb, 22, 220, 0.6, 3);
           world.events.push({ type: 'split' });
         }
@@ -276,7 +276,7 @@ function killShade(world, shade, colour, depth) {
   world.events.push({ type: 'kill', colour, combo: world.combo });
   if (depth > 0) logEvent(world, `+${points} CHAIN x${depth + 1}`, LIGHTS[colour].hex);
   else if (shade.kind === 'bulwark' || shade.kind === 'prismling' || shade.kind === 'splitter') {
-    logEvent(world, `+${points} ${SHADE_KINDS[shade.kind].label}${shade.kind === 'splitter' ? ' burst in two' : ''}`, light.hex);
+    logEvent(world, `+${points} ${SHADE_KINDS[shade.kind].label}`, light.hex);
   }
   if (world.combo > 0 && world.combo % 10 === 0) logEvent(world, `${world.combo} COMBO · x${multiplier}`, '#ffd46e');
 
@@ -337,7 +337,7 @@ function updateMotes(world, dt) {
         world.core.hp += 1;
         world.core.healFlash = 0.4;
         floatText(CORE_X, CORE_Y - 52, '+1', '#9fffcf', 16, 0.8);
-        logEvent(world, '+1 Core from Harvest', '#9fffcf');
+        logEvent(world, 'Harvest +1', '#9fffcf');
       }
       world.events.push({ type: 'heal' });
     }
