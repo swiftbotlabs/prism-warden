@@ -117,3 +117,18 @@ export function waveCleared(world) {
   const director = world.director;
   return director.queue.length === 0 && director.bossDue <= 0 && world.shades.every((shade) => shade.dead);
 }
+
+/** What this wave still has to send, by kind: [{kind, count, colours}] with the most numerous first (the boss last). */
+export function incomingByKind(world) {
+  const director = world.director;
+  const byKind = new Map();
+  for (const entry of director.queue) {
+    const row = byKind.get(entry.kind) ?? { kind: entry.kind, count: 0, colours: new Set() };
+    row.count += 1;
+    row.colours.add(entry.colour);
+    byKind.set(entry.kind, row);
+  }
+  const rows = [...byKind.values()].sort((a, b) => b.count - a.count);
+  if (director.bossDue > 0) rows.push({ kind: 'eclipse', count: 1, colours: new Set([0]) });
+  return rows;
+}

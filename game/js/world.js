@@ -1,8 +1,8 @@
 // One run of Prism Warden: the run's state and its fixed step (steering, spawns, beams, damage, combo, the Core, win and loss).
-import { ARENA_W, COMBO_TUNING, CORE_BASE_HP, CORE_RADIUS, CORE_X, CORE_Y, LIGHTS, TOTAL_WAVES, WHITE } from './config.js';
+import { COMBO_TUNING, CORE_BASE_HP, CORE_RADIUS, CORE_X, CORE_Y, LIGHTS, TOTAL_WAVES, WHITE } from './config.js';
 import { createWarden, steerWarden, beamOrigin } from './warden.js';
 import { castBeams } from './beam.js';
-import { createShade, lightHarms, moveShades } from './shades.js';
+import { createShade, lightHarms, moveShades, SHADE_KINDS } from './shades.js';
 import { damageEclipse, updateEclipse } from './boss.js';
 import { startWave, updateDirector, waveCleared, WAVE_PLAN } from './waves.js';
 import { beamStats, chainDamage, createUpgradeLevels, harvestChance } from './upgrades.js';
@@ -39,9 +39,16 @@ export function createWorld(seed) {
     slowmo: 0,
     banner: null,
     events: [],
+    log: [],
   };
   beginWave(world, 1);
   return world;
+}
+
+/** Adds a line to the HUD's event log; the newest few stay on screen and fade. */
+export function logEvent(world, text, colour = '#ece9ff') {
+  world.log.push({ text, colour, time: world.time });
+  if (world.log.length > 6) world.log.shift();
 }
 
 /** Starts wave `number`: Bastion shields recharge and the wave banner shows. */
@@ -52,6 +59,7 @@ export function beginWave(world, number) {
   world.core.shield = world.upgrades.bastion;
   world.banner = { title: number === TOTAL_WAVES ? 'FINAL WAVE' : `WAVE ${number}`, sub: WAVE_PLAN[number - 1].title, time: 0 };
   world.events.push({ type: 'wave', wave: number });
+  logEvent(world, `Wave ${number} · ${WAVE_PLAN[number - 1].title}`, '#ffd46e');
 }
 
 /** Score multiplier from the current combo: x1, then +1 every five kills in a row, up to x8. */
@@ -119,6 +127,7 @@ export function stepWorld(world, controls, dt) {
     const bonus = 50 * world.wave;
     world.score += bonus;
     floatText(CORE_X, CORE_Y - 70, `WAVE CLEAR +${bonus}`, '#ffd46e', 24, 1.2);
+    logEvent(world, `Wave ${world.wave} cleared +${bonus}`, '#ffd46e');
     if (world.wave >= TOTAL_WAVES) endRun(world, 'won');
     else {
       world.state = 'cleared';
@@ -153,6 +162,7 @@ function resolveCoreContacts(world) {
     if (world.core.shield > 0) {
       world.core.shield -= 1;
       world.events.push({ type: 'shield' });
+      logEvent(world, 'Shield took a hit', '#78dcff');
       burst(shade.x, shade.y, '120,220,255', 30, 260, 0.6, 3);
       continue;
     }
@@ -163,6 +173,7 @@ function resolveCoreContacts(world) {
     if (world.combo >= COMBO_TUNING.killsPerStep) floatText(CORE_X, CORE_Y + 64, 'COMBO BROKEN', '#ff5468', 20, 1.2);
     world.combo = 0;
     world.events.push({ type: 'crack' });
+    logEvent(world, `Core cracked -${shade.coreDamage}`, '#ff5468');
     burst(shade.x, shade.y, rgb, 26, 240, 0.7, 3);
     burst(shade.x, shade.y, '255,255,255', 12, 180, 0.4, 2);
   }
@@ -201,7 +212,9 @@ function applyBeams(world, dt) {
       if (hit.part >= 0) {
         const segment = shade.shell[hit.part];
         segment.hp -= amount;
-        if (segment.hp <= 0) {
+        if (segment.hp <= 0 && !segment.broken) {
+          segment.broken = true;
+          logEvent(world, `Bulwark ${LIGHTS[segment.colour].name} shell broken`, LIGHTS[segment.colour].hex);
           burst(hit.x, hit.y, LIGHTS[segment.colour].rgb, 22, 220, 0.6, 3);
           world.events.push({ type: 'split' });
         }
@@ -229,6 +242,7 @@ function hurtEclipse(world, boss, amount, colour) {
     burst(boss.x, boss.y, '255,255,255', 50, 300, 1, 3);
     floatText(boss.x, boss.y - 80, result === 'dead' ? `ECLIPSE BROKEN +${points}` : `PHASE BROKEN +${points}`, '#ffd46e', 28, 1.8);
     world.events.push({ type: 'phase' });
+    logEvent(world, result === 'dead' ? `ECLIPSE BROKEN +${points}` : `PHASE BROKEN +${points}`, '#ffd46e');
   }
   if (result === 'dead') {
     for (const shade of world.shades) {
@@ -257,9 +271,11 @@ function killShade(world, shade, colour, depth) {
   burst(shade.x, shade.y, light.rgb, 14 + shade.r, 240, 0.75, 3.5);
   burst(shade.x, shade.y, '255,255,255', 6, 150, 0.35, 2.5);
   world.events.push({ type: 'kill', colour, combo: world.combo });
-  if (world.combo > 0 && world.combo % 10 === 0) {
-    floatText(ARENA_W - 166, 150, `${world.combo} COMBO · x${multiplier}`, '#ffd46e', 22, 1.3);
+  if (depth > 0) logEvent(world, `+${points} CHAIN x${depth + 1}`, LIGHTS[colour].hex);
+  else if (shade.kind === 'bulwark' || shade.kind === 'prismling' || shade.kind === 'splitter') {
+    logEvent(world, `+${points} ${SHADE_KINDS[shade.kind].label}${shade.kind === 'splitter' ? ' burst in two' : ''}`, light.hex);
   }
+  if (world.combo > 0 && world.combo % 10 === 0) logEvent(world, `${world.combo} COMBO · x${multiplier}`, '#ffd46e');
 
   if (shade.kind === 'splitter') {
     const first = shade.colour === WHITE ? Math.floor(simRandom() * 3) : (shade.colour + 1) % 3;
@@ -318,6 +334,7 @@ function updateMotes(world, dt) {
         world.core.hp += 1;
         world.core.healFlash = 0.4;
         floatText(CORE_X, CORE_Y - 52, '+1', '#9fffcf', 16, 0.8);
+        logEvent(world, '+1 Core from Harvest', '#9fffcf');
       }
       world.events.push({ type: 'heal' });
     }

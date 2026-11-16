@@ -13,6 +13,61 @@ export const UPGRADES = [
   { id: 'harvest', name: 'Harvest', max: 3, line: 'Kills drop motes that heal the Core' },
 ];
 
+const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
+
+/** "Prism II": an upgrade's name and level as the HUD, cards and results show it. */
+export function upgradeLabel(id, level) {
+  return `${upgradeById(id).name} ${NUMERALS[level - 1] ?? level}`;
+}
+
+/** The owned build as one line, e.g. "Prism II · Reflect III · Lens I". */
+export function buildSummary(levels) {
+  return UPGRADES.filter((upgrade) => levels[upgrade.id] > 0).map((upgrade) => upgradeLabel(upgrade.id, levels[upgrade.id])).join(' · ');
+}
+
+/** How a card combines with what the run already owns, in one short line (or what it is good for, if nothing). */
+export function upgradeSynergy(id, levels) {
+  const owns = (other) => levels[other] > 0;
+  switch (id) {
+    case 'prism':
+      if (owns('reflect')) return 'with Reflect: every branch bounces too';
+      if (owns('lance')) return 'with Lance: every branch pierces';
+      if (owns('focus')) return 'with Focus: branches hit harder too';
+      return 'hit Shades of two colours at once';
+    case 'reflect':
+      if (owns('prism')) return 'with Prism: split beams bounce too';
+      return 'bank shots reach Shades behind you';
+    case 'focus':
+      if (owns('prism')) return 'with Prism: branches hit harder too';
+      if (owns('lens')) return 'with Lens: the damage bonuses stack';
+      return 'Bulwarks and THE ECLIPSE fall faster';
+    case 'lens':
+      if (owns('lance')) return 'with Lance: a wide beam pierces crowds';
+      if (owns('prism')) return 'with Prism: every branch widens';
+      return 'easier to catch zig-zagging Darters';
+    case 'chain':
+      if (owns('prism')) return 'with Prism: more kills start more arcs';
+      if (owns('lance')) return 'with Lance: pierce kills arc onward';
+      return 'clears packs of one colour';
+    case 'lance':
+      if (owns('prism')) return 'with Prism: every branch pierces';
+      if (owns('lens')) return 'with Lens: a wide beam pierces crowds';
+      return 'hits a second Shade in line';
+    case 'bastion':
+      if (owns('harvest')) return 'with Harvest: motes refill a bigger Core';
+      return 'more room for mistakes';
+    case 'swift':
+      if (owns('reflect')) return 'with Reflect: reposition for bank shots';
+      return 'reach the far side of the Core sooner';
+    case 'harvest':
+      if (owns('chain')) return 'with Chain: more kills, more motes';
+      if (owns('bastion')) return 'with Bastion: heal into a bigger Core';
+      return 'turns kills into Core HP';
+    default:
+      return '';
+  }
+}
+
 export function upgradeById(id) {
   return UPGRADES.find((upgrade) => upgrade.id === id);
 }

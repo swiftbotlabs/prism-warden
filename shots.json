@@ -2,21 +2,21 @@
   {
     "name": "1-play.jpg",
     "query": "?shot=play&seed=7",
-    "shows": "Wave 7 mid-run, chosen over the THE ECLIPSE boss frame (?shot=boss) as the more striking and readable cover: the Warden casts a thick Verdant beam (the colour lit in the colour bar) that bounces off mirrors and walls, with thinner Ember and Azure Prism branches, many Shades of five kinds, a combo and the full HUD (Core 12/12, wave 7/10 with progress, score 7,495 vs BEST 28,410, combo, colour selector, owned upgrades)."
+    "shows": "Wave 8 of 10 mid-run, chosen over the THE ECLIPSE boss frame (?shot=boss): the Warden casts a thick Verdant beam (lit in the colour bar) with Ember and Azure Prism branches bouncing off mirrors and walls, chain kills and floating scores, combo x3. The HUD explains the game in words: CORE 12/12 with '0 = RUN LOST', WAVE 8/10 with 'HOLD 2 MORE WAVES \u00b7 THEN THE ECLIPSE', score vs BEST 28,410, an INCOMING list of the Shades still to come with counts, an event log ('+75 CHAIN x3'), the rule strip 'MATCH THE BEAM TO THE SHADE' with the three colour/shape pairs, the colour selector and the named build (Prism II, Reflect II, Chain II, Lance I)."
   },
   {
     "name": "2-title.jpg",
     "query": "?shot=title&seed=7",
-    "shows": "The title screen: logo, tagline, '10 waves \u00b7 6 kinds of Shade \u00b7 9 upgrades \u00b7 a three-phase boss', a live reflected beam show, controls, rules of light, BEST SCORE 28,410 and 'Click to begin'."
+    "shows": "The title screen: logo, tagline, '10 waves \u00b7 6 kinds of Shade \u00b7 9 upgrades \u00b7 a three-phase boss', a live reflected beam show, controls, RULES OF LIGHT opening with 'Match the beam to the Shade's colour', BEST SCORE 28,410 and 'Click to begin'."
   },
   {
     "name": "3-upgrade.jpg",
     "query": "?shot=upgrade&seed=7",
-    "shows": "Between waves: WAVE 5 CLEARED and the choice of three upgrade cards, each with icon, name, level and effect, plus the Core, score, next wave and the build so far."
+    "shows": "Between waves: WAVE 5 CLEARED and three upgrade cards, each with icon, name, level, effect and how it combines with the build ('with Prism: more kills start more arcs'), plus Core, score, next wave and YOUR BUILD by name and level."
   },
   {
     "name": "4-results.jpg",
     "query": "?shot=results&seed=7",
-    "shows": "The results after beating THE ECLIPSE: VICTORY, waves cleared, Shades dispelled, colour accuracy, best combo, time, score 32,925 marked NEW BEST over the previous best 28,410, the build, and 'Press R or click to play again'."
+    "shows": "The results after beating THE ECLIPSE: VICTORY, waves cleared, Shades dispelled, colour accuracy, best combo, time, score 32,925 marked NEW BEST over the previous best 28,410, the build taken by name and level, and 'Press R or click to play again'."
   }
 ]

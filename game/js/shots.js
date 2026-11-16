@@ -6,6 +6,7 @@ import { applyUpgrade, dealUpgradeCards } from './upgrades.js';
 import { clearEffects, floatersNear, liveParticleCount, updateEffects } from './particles.js';
 import { loadBestScore, saveBestScore } from './storage.js';
 import { simRandom } from './random.js';
+import { incomingByKind } from './waves.js';
 import { updateTitleScene } from './screens.js';
 
 /** The upgrades a shot's pilot prefers: the ones that show off split and reflected light. */
@@ -16,6 +17,8 @@ const MAX_SECONDS = 60 * 12;
  * the title and the play HUD show it, and the winning run on the results beats it.
  */
 const RECORDED_BEST = 28410;
+/** The cover's pilot re-thinks its target every 0.3 s, like a person, so a crowd builds up as it would in a real run. */
+const COVER_REACTION = 0.3;
 
 /**
  * Plays a run with the autopilot until `stop(world, step)` says so (checked once a step), taking upgrades on the way.
@@ -72,19 +75,23 @@ function beamsReadable(world, mainFirst, branchTotal, minBeams) {
 }
 
 /**
- * How striking a wave-7 frame is. Frames that would muddle the story score -1: a banner, a hurt Core, text over the
+ * How striking a wave-7 or wave-8 frame is. Frames that would muddle the story score -1: a banner, a hurt Core, text over the
  * Core, the Warden under a HUD panel, a short main beam or stubby branches.
  */
 function waveDrama(world) {
-  if (world.wave !== 7 || world.state !== 'fight' || world.banner) return -1;
+  if (world.wave < 7 || world.wave > 8 || world.state !== 'fight' || world.banner) return -1;
   const warden = world.warden;
-  if (world.core.hp < world.core.maxHp * 0.6 || warden.y < 150 || warden.y > 660 || warden.x < 60 || warden.x > 1220) return -1;
-  if (floatersNear(CORE_X, CORE_Y, 90) > 0 || !beamsReadable(world, 220, 200, 3)) return -1;
+  if (world.core.hp < world.core.maxHp * 0.6 || warden.y < 180 || warden.y > 630 || warden.x < 340 || warden.x > 1010) return -1;
+  if (floatersNear(CORE_X, CORE_Y, 90) > 0 || floatersNear(CORE_X, CORE_Y, 2000) < 2 || !beamsReadable(world, 220, 200, 3)) return -1;
   const main = beamLengths(world.beams[0]);
   const facts = frameFacts(world);
-  if (facts.bounces < 2 || main.total < 400 || world.combo < 5 || facts.onScreen.length < 10) return -1;
-  return Math.min(main.total, 700) / 70 + facts.onScreen.length + facts.kinds * 3 + Math.min(facts.bounces, 5) * 3 + facts.hits * 2
-    + Math.min(world.combo, 40) / 2 + liveParticleCount() / 60;
+  const recentLog = world.log.filter((entry) => world.time - entry.time < 3).length;
+  if (facts.bounces < 1 || main.total < 350 || world.combo < 10 || facts.onScreen.length < 8 || facts.colours < 3) return -1;
+  const incoming = incomingByKind(world);
+  const stillToCome = incoming.reduce((sum, row) => sum + row.count, 0);
+  if (incoming.length < 3 || recentLog < 2) return -1;
+  return Math.min(main.total, 700) / 70 + facts.onScreen.length * 2 + + facts.kinds * 3 + Math.min(facts.bounces, 5) * 3 + facts.hits * 2
+    + Math.min(world.combo, 40) / 2 + liveParticleCount() / 60 + recentLog * 2 + incoming.length * 3 + Math.min(stillToCome, 12) / 2;
 }
 
 /**
@@ -151,7 +158,7 @@ export function runShotScene(game, kind, seed, hooks) {
       case 'play':
       case 'boss':
         world = kind === 'play'
-          ? mostDramaticMoment(runSeed, waveDrama, (w) => w.wave > 7 || (w.wave === 7 && w.state === 'cleared'), () => createPilot(0))
+          ? mostDramaticMoment(runSeed, waveDrama, (w) => w.wave > 8 || (w.wave === 8 && w.state === 'cleared'), () => createPilot(COVER_REACTION))
           : mostDramaticMoment(runSeed, bossDrama, (w) => w.wave === 10 && w.boss && (w.boss.dead || w.boss.phase > 1), () => createPilot(0, 0, true));
         if (world) {
           game.world = world;

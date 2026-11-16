@@ -20,6 +20,8 @@ Survive ten waves. Each wave brings something new: Drifters, zig-zagging Darters
 | M | mute / unmute |
 | R | restart (on the results screen, a click works too) |
 
+The HUD teaches as you play. The Core panel states the stakes ("0 = RUN LOST"), and the wave panel names the goal ("HOLD 3 MORE WAVES · THEN THE ECLIPSE"). An INCOMING panel lists each Shade kind the wave still has to send, with its colours and count. A rule strip by the colour bar says "MATCH THE BEAM TO THE SHADE". Your build shows by name and level ("Prism II"), and a short event log reports chains, broken shells and Core cracks. Each upgrade card also says how it combines with what you already own.
+
 Every colour also has its own shape (on Shade shells, beam tips, the reticle and the HUD), so the game can be played without telling red from green. All art is drawn in code with Canvas 2D and additive light. All sound is synthesized with WebAudio (beam hum, hits, kills, wrong colour, Core cracks, waves, cards, boss phases, victory, defeat, plus a quiet generative music loop). Nothing is loaded from the network.
 
 ### Files
@@ -40,10 +42,10 @@ The game is plain static files in `game/`: ES modules, no build step and no thir
 | `game/js/shades.js` | enemy kinds, movement, which light harms which part |
 | `game/js/waves.js` | the ten-wave plan and spawn director |
 | `game/js/boss.js` | THE ECLIPSE and its three phases |
-| `game/js/upgrades.js` | upgrade cards, dealing, effects, derived stats |
+| `game/js/upgrades.js` | upgrade cards, dealing, effects, synergy lines, derived stats |
 | `game/js/particles.js` | pooled particles, chain arcs and floating score text |
 | `game/js/render.js` | the arena scene with additive glow |
-| `game/js/hud.js` | Core bar, wave and progress, score and combo, colour selector, upgrades, hints |
+| `game/js/hud.js` | Core and stakes, wave goal and progress, score and combo, INCOMING list, rule strip, colour selector, named build, event log, hints |
 | `game/js/screens.js` | title, upgrade cards, results, pause |
 | `game/js/icons.js` | colour shapes and upgrade icons |
 | `game/js/audio.js` | WebAudio sound effects and generative music |
