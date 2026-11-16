@@ -3,7 +3,7 @@
 import { ARENA_H, ARENA_W, COMBO_TUNING, FONT, LIGHTS, PALETTE, TOTAL_WAVES } from './config.js';
 import { drawLightGlyph, drawShadeIcon, drawUpgradeIcon, traceShape } from './icons.js';
 import { upgradeLabel, UPGRADES } from './upgrades.js';
-import { incomingByKind, waveProgress, WAVE_PLAN } from './waves.js';
+import { incomingByKind, waveGoalText, waveProgress, WAVE_PLAN } from './waves.js';
 import { comboMultiplier } from './world.js';
 import { eclipseTitle } from './boss.js';
 import { SHADE_KINDS } from './shades.js';
@@ -59,6 +59,33 @@ export function drawHud(ctx, world, best, time, muted) {
   if (world.banner) drawWaveBanner(ctx, world.banner);
 }
 
+/**
+ * The screen areas the HUD covers this frame, as {x, y, w, h}: used to frame screenshots so no Shade hides under a panel.
+ * Sizes follow the drawing code below (text-sized panels are given their widest extent).
+ */
+export function hudPanelRects(world) {
+  const rects = [
+    { x: 16, y: 14, w: 320, h: 90 },
+    { x: ARENA_W / 2 - 180, y: 14, w: 360, h: 90 },
+    { x: ARENA_W - 316, y: 14, w: 300, h: 80 },
+    { x: ARENA_W / 2 - 300, y: ARENA_H - 107, w: 600, h: 30 },
+    { x: ARENA_W / 2 - 238, y: ARENA_H - 62, w: 476, h: 46 },
+    { x: ARENA_W - 300, y: ARENA_H - 34, w: 284, h: 24 },
+  ];
+  if (world.log.some((entry) => world.time - entry.time < 5)) rects.push({ x: 16, y: 112, w: 330, h: 90 });
+  if (world.director && world.state === 'fight') {
+    const rows = Math.max(1, Math.min(6, incomingByKind(world).length));
+    rects.push({ x: ARENA_W - 252, y: 102, w: 236, h: 40 + rows * 28 });
+  }
+  const owned = UPGRADES.filter((upgrade) => world.upgrades[upgrade.id] > 0).length;
+  if (owned > 0) {
+    const rows = Math.ceil(owned / 3);
+    rects.push({ x: 16, y: ARENA_H - 46 - (rows - 1) * 34 - 22, w: 3 * 122, h: (rows - 1) * 34 + 52 });
+  }
+  if (world.boss && !world.boss.dead) rects.push({ x: ARENA_W / 2 - 250, y: 112, w: 500, h: 46 });
+  return rects;
+}
+
 /** CORE n / max, its bar, shields, and the stakes: at 0 the run is lost. */
 function drawCorePanel(ctx, world, time) {
   const core = world.core;
@@ -92,9 +119,7 @@ function drawWavePanel(ctx, world) {
   text(ctx, `WAVE ${world.wave} / ${TOTAL_WAVES}`, cx, 34, 26, PALETTE.ink, 'center');
   text(ctx, plan.title.toUpperCase(), cx, 56, 14, PALETTE.dim, 'center', 700);
   bar(ctx, cx - 155, 65, 310, 6, waveProgress(world), PALETTE.gold);
-  const left = TOTAL_WAVES - world.wave;
-  const goal = left > 0 ? `HOLD ${left} MORE WAVE${left > 1 ? 'S' : ''} · THEN THE ECLIPSE` : 'BREAK THE ECLIPSE · WIN THE RUN';
-  text(ctx, goal, cx, 87, 16, PALETTE.gold, 'center', 900);
+  text(ctx, waveGoalText(world.wave), cx, 87, 16, PALETTE.gold, 'center', 900);
   const boss = world.boss;
   if (boss && !boss.dead) {
     drawPanel(ctx, cx - 250, 112, 500, 46, 10, 'rgba(10,6,24,0.85)', `rgba(${LIGHTS[boss.colour].rgb},0.6)`);

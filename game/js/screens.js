@@ -2,11 +2,11 @@
 import { ARENA_H, ARENA_W, CORE_X, CORE_Y, FONT, LIGHTS, PALETTE, TAU, TOTAL_WAVES } from './config.js';
 import { drawLightGlyph, drawUpgradeIcon } from './icons.js';
 import { drawPanel } from './hud.js';
-import { drawWorld } from './render.js';
+import { drawEclipse, drawWorld } from './render.js';
 import { makeMirror } from './arena.js';
-import { castBeams } from './beam.js';
+import { castPrismBeams } from './beam.js';
 import { createShade, SHADE_KINDS } from './shades.js';
-import { ECLIPSE_PHASES } from './boss.js';
+import { createEclipse, ECLIPSE_PHASES } from './boss.js';
 import { createUpgradeLevels, upgradeById, upgradeLabel, upgradeSynergy, UPGRADES } from './upgrades.js';
 import { WAVE_PLAN } from './waves.js';
 import { colourAccuracy } from './world.js';
@@ -92,7 +92,7 @@ export function updateTitleScene(scene, dt) {
   const sweep = t * 0.35 + Math.PI * 0.9 + Math.sin(t * 0.8) * 0.5;
   warden.aimX = warden.x + Math.cos(sweep) * 300;
   warden.aimY = warden.y + Math.sin(sweep) * 300;
-  scene.beams = castBeams({ mirrors: scene.mirrors, shades: [] }, warden.x, warden.y, warden.aimX, warden.aimY, warden.colour, scene.levels);
+  scene.beams = castPrismBeams({ mirrors: scene.mirrors, shades: [] }, warden.x, warden.y, warden.aimX, warden.aimY, warden.colour, scene.levels);
 }
 
 export function drawTitle(ctx, scene, best, time) {
@@ -163,32 +163,45 @@ export function drawTitle(ctx, scene, best, time) {
 // ----- Upgrade choice ----------------------------------------------------------------------------------------
 
 const CARD_W = 300;
-const CARD_H = 392;
 const CARD_GAP = 40;
-const CARD_TOP = 196;
+/** Card layouts: the usual one, and a shorter one that leaves room for the THE ECLIPSE preview after wave 9. */
+const CARD_LAYOUTS = {
+  usual: { top: 196, h: 392, icon: 116, iconSize: 112, name: 214, level: 248, effect: 282, divider: 326, synergy: 348, header: 92, sub: 142, bar: 618, build: 722 },
+  bossNext: { top: 296, h: 336, icon: 76, iconSize: 88, name: 152, level: 182, effect: 212, divider: 256, synergy: 278, header: 46, sub: 84, bar: 648, build: 726 },
+};
+
+/** True on the screen between wave 9 and the boss wave: the game previews THE ECLIPSE there. */
+export function bossIsNext(world) {
+  return world.wave === TOTAL_WAVES - 1;
+}
 
 /** Where the three cards sit, for drawing and for clicks. */
-export function upgradeCardRects(count = 3) {
+export function upgradeCardRects(count = 3, bossNext = false) {
+  const layout = bossNext ? CARD_LAYOUTS.bossNext : CARD_LAYOUTS.usual;
   const left = ARENA_W / 2 - (count * CARD_W + (count - 1) * CARD_GAP) / 2;
-  return Array.from({ length: count }, (_, i) => ({ x: left + i * (CARD_W + CARD_GAP), y: CARD_TOP, w: CARD_W, h: CARD_H }));
+  return Array.from({ length: count }, (_, i) => ({ x: left + i * (CARD_W + CARD_GAP), y: layout.top, w: CARD_W, h: layout.h }));
 }
 
 /** The index of the card under (x, y), or -1. */
-export function cardAt(x, y, count = 3) {
-  return upgradeCardRects(count).findIndex((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
+export function cardAt(x, y, count = 3, bossNext = false) {
+  return upgradeCardRects(count, bossNext).findIndex((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
 }
 
 export function drawUpgradeChoice(ctx, world, hand, hovered, time) {
   drawWorld(ctx, world, time, false);
   dim(ctx, 0.62);
-  text(ctx, `WAVE ${world.wave} CLEARED`, ARENA_W / 2, 92, 46, PALETTE.gold, 'center', 900);
-  text(ctx, 'Choose one upgrade · press 1, 2, 3 or click a card', ARENA_W / 2, 142, 20, PALETTE.ink, 'center', 600);
+  const bossNext = bossIsNext(world);
+  const layout = bossNext ? CARD_LAYOUTS.bossNext : CARD_LAYOUTS.usual;
+  text(ctx, `WAVE ${world.wave} CLEARED`, ARENA_W / 2, layout.header, bossNext ? 40 : 46, PALETTE.gold, 'center', 900);
+  text(ctx, 'Choose one upgrade · press 1, 2, 3 or click a card', ARENA_W / 2, layout.sub, bossNext ? 18 : 20, PALETTE.ink, 'center', 600);
+  if (bossNext) drawEclipsePreview(ctx, time);
 
-  upgradeCardRects(hand.length).forEach((rect, index) => {
+  upgradeCardRects(hand.length, bossNext).forEach((rect, index) => {
     const upgrade = upgradeById(hand[index]);
     const level = world.upgrades[upgrade.id];
     const lift = index === hovered ? 10 : 0;
     const y = rect.y - lift;
+    const cx = rect.x + rect.w / 2;
     const accent = LIGHTS[index].rgb;
     const fill = ctx.createLinearGradient(0, y, 0, y + rect.h);
     fill.addColorStop(0, `rgba(${accent},0.22)`);
@@ -207,28 +220,54 @@ export function drawUpgradeChoice(ctx, world, hand, hovered, time) {
     text(ctx, String(index + 1), rect.x + 34, y + 35, 20, '#0a0918', 'center', 900);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const halo = ctx.createRadialGradient(rect.x + rect.w / 2, y + 116, 4, rect.x + rect.w / 2, y + 116, 90);
+    const halo = ctx.createRadialGradient(cx, y + layout.icon, 4, cx, y + layout.icon, layout.iconSize * 0.8);
     halo.addColorStop(0, 'rgba(200,190,255,0.25)');
     halo.addColorStop(1, 'rgba(200,190,255,0)');
     ctx.fillStyle = halo;
-    ctx.fillRect(rect.x, y + 30, rect.w, 175);
+    ctx.fillRect(rect.x, y + 20, rect.w, layout.icon + layout.iconSize * 0.6);
     ctx.restore();
-    drawUpgradeIcon(ctx, upgrade.id, rect.x + rect.w / 2, y + 116 + Math.sin(time * 2 + index) * 3, 112);
-    text(ctx, upgrade.name.toUpperCase(), rect.x + rect.w / 2, y + 214, 32, '#ffffff', 'center', 900);
-    text(ctx, level === 0 ? 'NEW' : `LEVEL ${level} → ${level + 1}`, rect.x + rect.w / 2, y + 248, 16, PALETTE.gold, 'center', 800);
+    drawUpgradeIcon(ctx, upgrade.id, cx, y + layout.icon + Math.sin(time * 2 + index) * 3, layout.iconSize);
+    text(ctx, upgrade.name.toUpperCase(), cx, y + layout.name, 32, '#ffffff', 'center', 900);
+    text(ctx, level === 0 ? 'NEW' : `LEVEL ${level} → ${level + 1}`, cx, y + layout.level, 16, PALETTE.gold, 'center', 800);
     ctx.font = `600 19px ${FONT}`;
-    wrapLines(ctx, upgrade.line, rect.w - 50).forEach((line, i) => text(ctx, line, rect.x + rect.w / 2, y + 282 + i * 25, 19, PALETTE.ink, 'center', 600));
+    wrapLines(ctx, upgrade.line, rect.w - 50).forEach((line, i) => text(ctx, line, cx, y + layout.effect + i * 25, 19, PALETTE.ink, 'center', 600));
     ctx.fillStyle = 'rgba(160,150,255,0.3)';
-    ctx.fillRect(rect.x + 30, y + 326, rect.w - 60, 1.5);
+    ctx.fillRect(rect.x + 30, y + layout.divider, rect.w - 60, 1.5);
     ctx.font = `800 17px ${FONT}`;
-    wrapLines(ctx, upgradeSynergy(upgrade.id, world.upgrades), rect.w - 44).forEach((line, i) => text(ctx, line, rect.x + rect.w / 2, y + 348 + i * 22, 17, '#9fffcf', 'center', 800));
+    wrapLines(ctx, upgradeSynergy(upgrade.id, world.upgrades), rect.w - 44).forEach((line, i) => text(ctx, line, cx, y + layout.synergy + i * 22, 17, '#9fffcf', 'center', 800));
   });
 
   const next = WAVE_PLAN[world.wave];
-  drawPanel(ctx, ARENA_W / 2 - 380, 618, 760, 50, 25);
+  drawPanel(ctx, ARENA_W / 2 - 380, layout.bar, 760, 48, 24);
   const core = world.core;
-  text(ctx, `CORE ${Math.ceil(core.hp)}/${core.maxHp}   ·   SCORE ${world.score.toLocaleString('en-US')}   ·   NEXT: WAVE ${world.wave + 1} · ${next.title}`, ARENA_W / 2, 643, 18, PALETTE.ink, 'center', 700);
-  drawBuild(ctx, world.upgrades, ARENA_W / 2, 722, 'YOUR BUILD');
+  text(ctx, `CORE ${Math.ceil(core.hp)}/${core.maxHp}   ·   SCORE ${world.score.toLocaleString('en-US')}   ·   NEXT: WAVE ${world.wave + 1} · ${next.title}`, ARENA_W / 2, layout.bar + 24, 18, PALETTE.ink, 'center', 700);
+  drawBuild(ctx, world.upgrades, ARENA_W / 2, layout.build, 'YOUR BUILD');
+}
+
+/** "NEXT: THE ECLIPSE": the boss drawn by its own renderer, beside its three phases named one per line. */
+function drawEclipsePreview(ctx, time) {
+  const cx = ARENA_W / 2;
+  drawPanel(ctx, cx - 420, 104, 840, 176, 18, 'rgba(8,6,22,0.88)', 'rgba(255,212,110,0.45)');
+  const boss = createEclipse();
+  boss.x = 0;
+  boss.y = 0;
+  boss.entering = 0;
+  boss.rot = time * 0.5;
+  boss.colour = Math.floor(time / 2.6) % 3;
+  ctx.save();
+  ctx.translate(cx - 290, 192);
+  ctx.scale(0.82, 0.82);
+  drawEclipse(ctx, boss, time, { label: false });
+  ctx.restore();
+  const left = cx - 160;
+  text(ctx, 'NEXT: THE ECLIPSE', left, 136, 34, PALETTE.gold, 'left', 900);
+  ECLIPSE_PHASES.forEach((phase, index) => {
+    const y = 176 + index * 30;
+    if (phase.colour >= 0) drawLightGlyph(ctx, phase.colour, left + 8, y, 8);
+    else [0, 1, 2].forEach((colour, i) => drawLightGlyph(ctx, colour, left + i * 9, y, 4.5));
+    text(ctx, `${['I', 'II', 'III'][index]} · ${phase.name}`, left + 26, y + 1, 19, '#ffffff', 'left', 900);
+    text(ctx, phase.blurb, left + 200, y + 1, 18, PALETTE.dim, 'left', 700);
+  });
 }
 
 /** The upgrades a run owns as one centred row of named chips ("Prism II"), with a label in front. */
@@ -263,12 +302,14 @@ export function drawResults(ctx, world, best, isNewBest, previousBest, time) {
   ctx.save();
   ctx.shadowColor = won ? 'rgba(255,212,110,0.9)' : 'rgba(255,84,104,0.9)';
   ctx.shadowBlur = 34;
-  text(ctx, won ? 'VICTORY' : 'CORE SHATTERED', ARENA_W / 2, 96, won ? 92 : 76, won ? '#fff2c9' : '#ff8293', 'center', 900);
+  text(ctx, won ? 'VICTORY' : 'CORE SHATTERED', ARENA_W / 2, 74, won ? 84 : 72, won ? '#fff2c9' : '#ff8293', 'center', 900);
   ctx.restore();
-  text(ctx, won ? 'THE ECLIPSE is broken. The Core holds.' : `The Shades broke through on wave ${world.wave}.`, ARENA_W / 2, 162, 22, PALETTE.ink, 'center', 600);
+  if (won) drawFallenEclipse(ctx, ARENA_W / 2, 164, time);
+  text(ctx, won ? 'THE ECLIPSE is broken. The Core holds.' : `The Shades broke through on wave ${world.wave}.`, ARENA_W / 2, won ? 226 : 150, 21, PALETTE.ink, 'center', 600);
 
   const panelX = ARENA_W / 2 - 300;
-  drawPanel(ctx, panelX, 200, 600, 345, 18, 'rgba(14,11,36,0.92)');
+  const top = 250;
+  drawPanel(ctx, panelX, top, 600, 284, 18, 'rgba(14,11,36,0.92)');
   const rows = [
     ['Waves cleared', `${world.stats.wavesCleared} / ${TOTAL_WAVES}`],
     ['Shades dispelled', String(world.stats.kills)],
@@ -277,32 +318,49 @@ export function drawResults(ctx, world, best, isNewBest, previousBest, time) {
     ['Time', formatTime(world.stats.time)],
   ];
   rows.forEach(([label, value], index) => {
-    const y = 236 + index * 40;
-    text(ctx, label, panelX + 40, y, 21, PALETTE.dim, 'left', 600);
-    text(ctx, value, panelX + 560, y, 23, '#ffffff', 'right', 800);
+    const y = top + 30 + index * 34;
+    text(ctx, label, panelX + 40, y, 20, PALETTE.dim, 'left', 600);
+    text(ctx, value, panelX + 560, y, 22, '#ffffff', 'right', 800);
   });
   ctx.fillStyle = 'rgba(160,150,255,0.25)';
-  ctx.fillRect(panelX + 30, 434, 540, 1.5);
-  text(ctx, 'SCORE', panelX + 40, 468, 22, PALETTE.gold, 'left', 800);
-  text(ctx, world.score.toLocaleString('en-US'), panelX + 560, 470, 42, '#ffffff', 'right', 900);
-  text(ctx, isNewBest ? `PREVIOUS BEST ${previousBest.toLocaleString('en-US')}` : `BEST ${best.toLocaleString('en-US')}`, panelX + 40, 512, 18, PALETTE.dim, 'left', 700);
+  ctx.fillRect(panelX + 30, top + 188, 540, 1.5);
+  text(ctx, 'SCORE', panelX + 40, top + 218, 22, PALETTE.gold, 'left', 800);
+  text(ctx, world.score.toLocaleString('en-US'), panelX + 560, top + 220, 42, '#ffffff', 'right', 900);
+  const bestY = top + 258;
+  text(ctx, isNewBest ? `PREVIOUS BEST ${previousBest.toLocaleString('en-US')}` : `BEST ${best.toLocaleString('en-US')}`, panelX + 40, bestY, 18, PALETTE.dim, 'left', 700);
   if (isNewBest) {
     const pop = 1 + 0.06 * Math.sin(time * 6);
     ctx.save();
-    ctx.translate(panelX + 470, 514);
+    ctx.translate(panelX + 470, bestY + 2);
     ctx.scale(pop, pop);
     drawPanel(ctx, -90, -17, 180, 34, 17, 'rgba(255,212,110,0.95)', '#ffffff');
     text(ctx, 'NEW BEST!', 0, 1, 19, '#1a1030', 'center', 900);
     ctx.restore();
   } else {
-    text(ctx, world.score >= best ? '' : `${(best - world.score).toLocaleString('en-US')} short of best`, panelX + 560, 512, 16, PALETTE.dim, 'right', 600);
+    text(ctx, world.score >= best ? '' : `${(best - world.score).toLocaleString('en-US')} short of best`, panelX + 560, bestY, 16, PALETTE.dim, 'right', 600);
   }
-  drawBuild(ctx, world.upgrades, ARENA_W / 2, 604, 'BUILD TAKEN');
+  drawBuild(ctx, world.upgrades, ARENA_W / 2, 582, 'BUILD TAKEN');
 
   const pulse = 0.6 + 0.4 * Math.sin(time * 3.5);
-  drawPanel(ctx, ARENA_W / 2 - 250, 660, 500, 60, 30, `rgba(255,212,110,${0.1 + 0.12 * pulse})`, `rgba(255,212,110,${0.5 + 0.5 * pulse})`);
-  text(ctx, 'Press R or click to play again', ARENA_W / 2, 691, 26, '#ffffff', 'center', 800);
-  text(ctx, 'Esc returns to the title', ARENA_W / 2, 750, 16, PALETTE.dim, 'center', 600);
+  drawPanel(ctx, ARENA_W / 2 - 250, 628, 500, 60, 30, `rgba(255,212,110,${0.1 + 0.12 * pulse})`, `rgba(255,212,110,${0.5 + 0.5 * pulse})`);
+  text(ctx, 'Press R or click to play again', ARENA_W / 2, 659, 26, '#ffffff', 'center', 800);
+  text(ctx, 'Esc returns to the title', ARENA_W / 2, 716, 16, PALETTE.dim, 'center', 600);
+}
+
+/** The beaten boss under VICTORY: THE ECLIPSE drawn small by its own renderer, dimmed and cracked. */
+function drawFallenEclipse(ctx, x, y, time) {
+  const boss = createEclipse();
+  boss.x = 0;
+  boss.y = 0;
+  boss.entering = 0;
+  boss.dead = true;
+  boss.rot = time * 0.1;
+  boss.colour = 0;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(0.62, 0.62);
+  drawEclipse(ctx, boss, time, { label: false, fallen: true });
+  ctx.restore();
 }
 
 // ----- Pause -------------------------------------------------------------------------------------------------

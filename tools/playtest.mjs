@@ -88,16 +88,16 @@ try {
   s = await state();
   check('a click on the results plays again', s.mode === 'play' && s.wave === 1);
 
-  // The upgrade choice, live: wave 5 cleared by the autopilot, then a card picked with the mouse.
+  // The upgrade choice, live: wave 9 cleared by the autopilot (THE ECLIPSE previewed), then a card picked with the mouse.
   await browser.navigate(`http://localhost:${port}/index.html?shot=upgrade&seed=7&live=1`);
   await browser.waitFor('window.__shotReady === true', 120000);
   check('the upgrade screen deals three cards', (await state()).mode === 'upgrade');
-  await mouse('mouseMoved', 640, 380);
+  await mouse('mouseMoved', 640, 470);
   await sleep(500);
-  await click(640, 380);
+  await click(640, 470);
   await sleep(300);
   s = await state();
-  check('clicking a card starts the next wave', s.mode === 'play' && s.wave === 6, JSON.stringify(s));
+  check('clicking a card starts the boss wave', s.mode === 'play' && s.wave === 10, JSON.stringify(s));
 
   // Winning: the autopilot beats all ten waves and THE ECLIPSE with the real rules.
   await browser.navigate(`http://localhost:${port}/index.html?shot=results&seed=7&live=1`);

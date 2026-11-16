@@ -372,13 +372,17 @@ function drawBulwark(ctx, shade, time) {
   ctx.fill();
 }
 
-/** THE ECLIPSE: a black sun with a corona of rays in its phase colour and orbiting colour glyphs. */
-function drawEclipse(ctx, boss, time) {
+/**
+ * THE ECLIPSE: a black sun with a corona of rays in its phase colour and orbiting colour glyphs. Used in play, for the
+ * "NEXT: THE ECLIPSE" preview after wave 9, and (with `fallen`) dimmed and cracked on the victory screen.
+ */
+export function drawEclipse(ctx, boss, time, { label = true, fallen = false } = {}) {
   const light = LIGHTS[boss.colour];
   const { x, y, r } = boss;
+  const power = fallen ? 0.3 : 1;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  drawGlow(ctx, x, y, r * 3.2, light.rgb, 0.75);
+  drawGlow(ctx, x, y, r * 3.2, light.rgb, 0.75 * power);
   ctx.beginPath();
   for (let i = 0; i < 16; i += 1) {
     const angle = boss.rot + (i / 16) * TAU;
@@ -386,7 +390,7 @@ function drawEclipse(ctx, boss, time) {
     ctx.moveTo(x + Math.cos(angle) * r * 0.95, y + Math.sin(angle) * r * 0.95);
     ctx.lineTo(x + Math.cos(angle + 0.06) * length, y + Math.sin(angle + 0.06) * length);
   }
-  ctx.strokeStyle = `rgba(${light.rgb},0.8)`;
+  ctx.strokeStyle = `rgba(${light.rgb},${0.8 * power})`;
   ctx.lineWidth = 4;
   ctx.stroke();
   if (boss.broken > 0) {
@@ -413,19 +417,47 @@ function drawEclipse(ctx, boss, time) {
     drawLightGlyph(ctx, boss.colour, x + Math.cos(angle) * r * 0.62, y + Math.sin(angle) * r * 0.62, 9);
   }
   ctx.beginPath();
-  ctx.ellipse(x, y, r * 0.34, r * 0.1, 0, 0, TAU);
+  ctx.ellipse(x, y, r * 0.34, fallen ? r * 0.025 : r * 0.1, 0, 0, TAU);
   ctx.fillStyle = light.hex;
   ctx.fill();
+  if (fallen) drawEclipseCracks(ctx, x, y, r);
   if (boss.flash > 0) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     drawGlow(ctx, x, y, r * 1.5, '255,255,255', boss.flash * 5);
     ctx.restore();
   }
+  if (!label) return;
   ctx.font = `800 15px ${FONT}`;
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(236,233,255,0.85)';
   ctx.fillText('THE ECLIPSE', x, y + r + 34);
+}
+
+/** Broken THE ECLIPSE: a dark veil over the body and jagged cracks with light leaking through them. */
+function drawEclipseCracks(ctx, x, y, r) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.fillStyle = 'rgba(4,3,12,0.45)';
+  ctx.fill();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineJoin = 'round';
+  for (let i = 0; i < 7; i += 1) {
+    const angle = i * 0.9 + 0.3;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(angle) * r * 0.12, y + Math.sin(angle) * r * 0.12);
+    ctx.lineTo(x + Math.cos(angle + 0.25) * r * 0.45, y + Math.sin(angle + 0.25) * r * 0.45);
+    ctx.lineTo(x + Math.cos(angle - 0.1) * r * 0.75, y + Math.sin(angle - 0.1) * r * 0.75);
+    ctx.lineTo(x + Math.cos(angle + 0.12) * r * 1.02, y + Math.sin(angle + 0.12) * r * 1.02);
+    ctx.strokeStyle = 'rgba(255,212,110,0.35)';
+    ctx.lineWidth = 7;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,245,215,0.95)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /** Beams as layered additive strokes: a wide halo, the coloured body and a white-hot centre, flares at bounces, a shaped tip. */

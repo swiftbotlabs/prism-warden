@@ -12,6 +12,28 @@ export const SHADE_KINDS = {
   eclipse: { label: 'The Eclipse', radius: 60, hp: 1, speed: 0, value: 0, coreDamage: 0 },
 };
 
+/** Which part of a Shade a beam touching (hx, hy) strikes: a Bulwark shell segment index, or -1 for the body or heart. */
+export function partStruck(shade, hx, hy) {
+  if (!shade.shell) return -1;
+  let angle = Math.atan2(hy - shade.y, hx - shade.x) - shade.rot;
+  angle = ((angle % TAU) + TAU) % TAU;
+  const segment = Math.floor(angle / (TAU / 3)) % 3;
+  return shade.shell[segment].hp > 0 ? segment : -1;
+}
+
+/** The colour of light that harms this part; WHITE means any light does (white Shades, a Bulwark's bared heart). */
+export function harmingColour(shade, part) {
+  if (part >= 0) return shade.shell[part].colour;
+  if (shade.kind === 'bulwark') return WHITE;
+  return shade.colour;
+}
+
+/** The colour rule: true when light of `colour` harms the struck part of this Shade (its own colour, or any light on white). */
+export function lightHarmsShade(shade, part, colour) {
+  const needed = harmingColour(shade, part);
+  return needed === WHITE || needed === colour;
+}
+
 /** Seconds between a Prismling's colour changes. */
 export const PRISMLING_PERIOD = 2;
 
@@ -103,24 +125,3 @@ export function moveShades(shades, dt) {
   }
 }
 
-/** Which part of a Shade a beam touching (hx, hy) strikes: a Bulwark shell segment index, or -1 for the body or heart. */
-export function partStruck(shade, hx, hy) {
-  if (!shade.shell) return -1;
-  let angle = Math.atan2(hy - shade.y, hx - shade.x) - shade.rot;
-  angle = ((angle % TAU) + TAU) % TAU;
-  const segment = Math.floor(angle / (TAU / 3)) % 3;
-  return shade.shell[segment].hp > 0 ? segment : -1;
-}
-
-/** The colour of light that harms this part; WHITE means any light does (white Shades, a Bulwark's bared heart). */
-export function harmingColour(shade, part) {
-  if (part >= 0) return shade.shell[part].colour;
-  if (shade.kind === 'bulwark') return WHITE;
-  return shade.colour;
-}
-
-/** True when light of `colour` harms that part. */
-export function lightHarms(shade, part, colour) {
-  const needed = harmingColour(shade, part);
-  return needed === WHITE || needed === colour;
-}

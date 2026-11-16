@@ -4,19 +4,25 @@ import { partStruck } from './shades.js';
 import { beamStats } from './upgrades.js';
 
 /**
- * Every beam the Warden casts this step: the main beam in the chosen colour, then one Prism branch per level,
+ * Prism splitting: every beam the Warden casts this step: the main beam in the chosen colour, then one Prism branch per level,
  * each in the next colour round the spectrum, fanned out to alternate sides at reduced power.
  */
-export function castBeams(world, originX, originY, aimX, aimY, colour, levels) {
+export function castPrismBeams(world, originX, originY, aimX, aimY, colour, levels) {
   const stats = beamStats(levels);
   const angle = Math.atan2(aimY - originY, aimX - originX);
-  const beams = [traceBeam(world, originX, originY, angle, colour, 1, stats)];
+  const beams = [traceReflectingBeam(world, originX, originY, angle, colour, 1, stats)];
   for (let i = 1; i <= stats.branches; i += 1) {
     const side = i % 2 === 1 ? 1 : -1;
     const branchAngle = angle + side * BEAM_TUNING.branchSpread * Math.ceil(i / 2);
-    beams.push(traceBeam(world, originX, originY, branchAngle, (colour + i) % 3, BEAM_TUNING.branchPower, stats));
+    beams.push(traceReflectingBeam(world, originX, originY, branchAngle, (colour + i) % 3, BEAM_TUNING.branchPower, stats));
   }
   return beams;
+}
+
+/** Reflection: mirrors (and walls, with Reflect) bounce the beam like light, angle in equals angle out about the normal. */
+export function reflectDirection(dx, dy, nx, ny) {
+  const dot = dx * nx + dy * ny;
+  return { dx: dx - 2 * dot * nx, dy: dy - 2 * dot * ny };
 }
 
 /**
@@ -24,7 +30,7 @@ export function castBeams(world, originX, originY, aimX, aimY, colour, levels) {
  * stops at the Core, and stops at the first Shade it touches unless Lance lets it pierce.
  * Returns the polyline it drew, the bounce points and every Shade hit with the part struck.
  */
-export function traceBeam(world, x, y, angle, colour, power, stats) {
+export function traceReflectingBeam(world, x, y, angle, colour, power, stats) {
   let dx = Math.cos(angle);
   let dy = Math.sin(angle);
   let remaining = BEAM_TUNING.range;
@@ -94,9 +100,7 @@ export function traceBeam(world, x, y, angle, colour, power, stats) {
     }
     if (surface === 'wall') wallBounces -= 1;
     else surface.glow = 1;
-    const dot = dx * normalX + dy * normalY;
-    dx -= 2 * dot * normalX;
-    dy -= 2 * dot * normalY;
+    ({ dx, dy } = reflectDirection(dx, dy, normalX, normalY));
     beam.bounces.push(x, y);
     x += dx * 0.5;
     y += dy * 0.5;

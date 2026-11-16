@@ -3,14 +3,35 @@ import { ARENA_W, AZURE, CORE_X, CORE_Y, EMBER, LIGHTS, TAU, WHITE } from './con
 import { createShade } from './shades.js';
 import { simRandom } from './random.js';
 
-/** Each phase: its name, shell colour (-1 = cycles), health, orbit and what it summons how often. */
+/** Boss phases: each one's name, shell colour (-1 = cycles), health, orbit, what it summons how often, and its one-line description. */
 export const ECLIPSE_PHASES = [
-  { name: 'UMBRA', colour: EMBER, hp: 30, orbitSpeed: 0.2, radius: 300, summon: 'drifters', every: 3.4 },
-  { name: 'PENUMBRA', colour: AZURE, hp: 36, orbitSpeed: 0.32, radius: 285, summon: 'darterRing', every: 4.4 },
-  { name: 'TOTALITY', colour: -1, hp: 44, orbitSpeed: 0.4, radius: 250, summon: 'splitters', every: 4.6 },
+  { name: 'UMBRA', colour: EMBER, hp: 30, orbitSpeed: 0.2, radius: 300, summon: 'drifters', every: 3.4, blurb: 'Ember shell · summons Drifters' },
+  { name: 'PENUMBRA', colour: AZURE, hp: 36, orbitSpeed: 0.32, radius: 285, summon: 'darterRing', every: 4.4, blurb: 'Azure shell · rings of Darters' },
+  { name: 'TOTALITY', colour: -1, hp: 44, orbitSpeed: 0.4, radius: 250, summon: 'splitters', every: 4.6, blurb: 'colour shifts · Splitters · closes in' },
 ];
 /** Seconds between colour shifts in the cycling phase. */
 const TOTALITY_SHIFT = 2.6;
+
+/**
+ * Deals damage to THE ECLIPSE. Returns 'hit', 'phase' when a phase breaks (the next one begins at full health)
+ * or 'dead' when the last one does.
+ */
+export function damageEclipsePhase(boss, amount) {
+  if (boss.entering > 0) return 'immune';
+  boss.hp -= amount;
+  boss.flash = 0.06;
+  if (boss.hp > 0) return 'hit';
+  if (boss.phase >= ECLIPSE_PHASES.length - 1) {
+    boss.dead = true;
+    return 'dead';
+  }
+  boss.phase += 1;
+  boss.hp = ECLIPSE_PHASES[boss.phase].hp;
+  boss.maxHp = boss.hp;
+  boss.broken = 1.2;
+  boss.summonTimer = 1.5;
+  return 'phase';
+}
 
 export function createEclipse() {
   const boss = createShade('eclipse', EMBER, ARENA_W / 2, -90, 1, true);
@@ -79,27 +100,6 @@ function summonMinions(world, boss, pattern) {
     world.shades.push(createShade('splitter', colour, boss.x, boss.y, speed, false, world.toughness));
     world.shades.push(createShade('prismling', (colour + 1) % 3, boss.x + 40, boss.y, speed, false, world.toughness));
   }
-}
-
-/**
- * Deals damage to THE ECLIPSE. Returns 'hit', 'phase' when a phase breaks (the next one begins at full health)
- * or 'dead' when the last one does.
- */
-export function damageEclipse(boss, amount) {
-  if (boss.entering > 0) return 'immune';
-  boss.hp -= amount;
-  boss.flash = 0.06;
-  if (boss.hp > 0) return 'hit';
-  if (boss.phase >= ECLIPSE_PHASES.length - 1) {
-    boss.dead = true;
-    return 'dead';
-  }
-  boss.phase += 1;
-  boss.hp = ECLIPSE_PHASES[boss.phase].hp;
-  boss.maxHp = boss.hp;
-  boss.broken = 1.2;
-  boss.summonTimer = 1.5;
-  return 'phase';
 }
 
 /** The name and colour label the HUD shows above the boss bar. */

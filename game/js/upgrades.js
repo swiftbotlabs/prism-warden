@@ -13,18 +13,6 @@ export const UPGRADES = [
   { id: 'harvest', name: 'Harvest', max: 3, line: 'Kills drop motes that heal the Core' },
 ];
 
-const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
-
-/** "Prism II": an upgrade's name and level as the HUD, cards and results show it. */
-export function upgradeLabel(id, level) {
-  return `${upgradeById(id).name} ${NUMERALS[level - 1] ?? level}`;
-}
-
-/** The owned build as one line, e.g. "Prism II · Reflect III · Lens I". */
-export function buildSummary(levels) {
-  return UPGRADES.filter((upgrade) => levels[upgrade.id] > 0).map((upgrade) => upgradeLabel(upgrade.id, levels[upgrade.id])).join(' · ');
-}
-
 /** How a card combines with what the run already owns, in one short line (or what it is good for, if nothing). */
 export function upgradeSynergy(id, levels) {
   const owns = (other) => levels[other] > 0;
@@ -66,6 +54,18 @@ export function upgradeSynergy(id, levels) {
     default:
       return '';
   }
+}
+
+const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
+
+/** "Prism II": an upgrade's name and level as the HUD, cards and results show it. */
+export function upgradeLabel(id, level) {
+  return `${upgradeById(id).name} ${NUMERALS[level - 1] ?? level}`;
+}
+
+/** The owned build as one line, e.g. "Prism II · Reflect III · Lens I". */
+export function buildSummary(levels) {
+  return UPGRADES.filter((upgrade) => levels[upgrade.id] > 0).map((upgrade) => upgradeLabel(upgrade.id, levels[upgrade.id])).join(' · ');
 }
 
 export function upgradeById(id) {

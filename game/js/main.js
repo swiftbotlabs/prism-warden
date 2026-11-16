@@ -4,7 +4,7 @@ import { createInput, movementAxes, takeClicks, takePresses, takeWheel } from '.
 import { isMuted, playSound, setBeamHum, setMusicMood, setMuted, unlockAudio } from './audio.js';
 import { buildBackdrop, drawWorld } from './render.js';
 import { drawHud } from './hud.js';
-import { cardAt, createTitleScene, drawPause, drawResults, drawTitle, drawUpgradeChoice, updateTitleScene } from './screens.js';
+import { bossIsNext, cardAt, createTitleScene, drawPause, drawResults, drawTitle, drawUpgradeChoice, updateTitleScene } from './screens.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
 import { applyUpgrade, dealUpgradeCards, upgradeById } from './upgrades.js';
 import { clearEffects, updateEffects } from './particles.js';
@@ -134,7 +134,7 @@ function handleScreenInput() {
       break;
     }
     case 'upgrade': {
-      const hovered = cardAt(input.mouseX, input.mouseY, game.hand.length);
+      const hovered = cardAt(input.mouseX, input.mouseY, game.hand.length, bossIsNext(game.world));
       if (hovered !== game.hovered && hovered >= 0) playSound('hover', 0, hovered);
       game.hovered = hovered;
       const key = presses.map((code) => ['Digit1', 'Digit2', 'Digit3'].indexOf(code)).find((index) => index >= 0);

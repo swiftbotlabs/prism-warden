@@ -66,8 +66,14 @@ export function chainArc(x1, y1, x2, y2, rgb) {
   }
 }
 
-/** Rising score or label text. */
+/** Rising score or label text; a new one stacks above any it would overlap, so popups never cover each other. */
 export function floatText(x, y, text, colour, size = 18, life = 0.9) {
+  const halfWidth = text.length * size * 0.3;
+  for (let pass = 0; pass < 8; pass += 1) {
+    const blocker = floaters.find((f) => f.live && Math.abs(f.x - x) < halfWidth + f.text.length * f.size * 0.3 && Math.abs(f.y - y) < (size + f.size) * 0.55);
+    if (!blocker) break;
+    y = blocker.y - (size + blocker.size) * 0.6;
+  }
   const f = floaters[nextFloater];
   nextFloater = (nextFloater + 1) % MAX_FLOATERS;
   f.live = true;
@@ -105,6 +111,11 @@ export function updateEffects(dt) {
     arc.life -= dt;
     if (arc.life <= 0) arc.live = false;
   }
+}
+
+/** The live floating texts' colours, for framing screenshots. */
+export function floaterColours() {
+  return new Set(floaters.filter((f) => f.live).map((f) => f.colour));
 }
 
 /** Floating texts whose centre is within `radius` of (x, y). */

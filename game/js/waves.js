@@ -1,5 +1,5 @@
 // The wave director: the ten-wave plan, each wave's spawn queue (kind, colour, edge, timing), its progress and when it is cleared.
-import { EMBER, VERDANT, AZURE, WHITE, ARENA_W, ARENA_H } from './config.js';
+import { EMBER, VERDANT, AZURE, WHITE, ARENA_W, ARENA_H, TOTAL_WAVES } from './config.js';
 import { createShade, edgeSpawnPoint } from './shades.js';
 import { createEclipse } from './boss.js';
 import { layoutMirrors } from './arena.js';
@@ -27,6 +27,18 @@ export const WAVE_PLAN = [
   { title: 'THE ECLIPSE', mix: { drifter: 10, darter: 8, prismling: 4 }, colours: ALL, gap: 2.4, white: 0.15, boss: true,
     hint: 'Match the Eclipse\'s colour to break its phases. Survive all three.' },
 ];
+
+/** The run's goal as the HUD states it: hold the waves, then break THE ECLIPSE on the last one to win. */
+export function waveGoalText(wave) {
+  const left = TOTAL_WAVES - wave;
+  return left > 0 ? `HOLD ${left} MORE WAVE${left > 1 ? 'S' : ''} · THEN THE ECLIPSE` : 'BREAK THE ECLIPSE · WIN THE RUN';
+}
+
+/** A wave is cleared when nothing is left to spawn and no Shade (or boss) remains. */
+export function isWaveCleared(world) {
+  const director = world.director;
+  return director.queue.length === 0 && director.bossDue <= 0 && world.shades.every((shade) => shade.dead);
+}
 
 /** Shade speed multiplier for a wave. */
 export function waveSpeedScale(wave) {
@@ -110,12 +122,6 @@ export function waveProgress(world) {
   const director = world.director;
   if (!director) return 0;
   return Math.min(1, director.defeated / Math.max(1, director.total));
-}
-
-/** A wave is cleared when nothing is left to spawn and no Shade (or boss) remains. */
-export function waveCleared(world) {
-  const director = world.director;
-  return director.queue.length === 0 && director.bossDue <= 0 && world.shades.every((shade) => shade.dead);
 }
 
 /** What this wave still has to send, by kind: [{kind, count, colours}] with the most numerous first (the boss last). */

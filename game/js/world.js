@@ -1,10 +1,10 @@
 // One run of Prism Warden: the run's state and its fixed step (steering, spawns, beams, damage, combo, the Core, win and loss).
 import { COMBO_TUNING, CORE_BASE_HP, CORE_RADIUS, CORE_X, CORE_Y, LIGHTS, TOTAL_WAVES, WHITE } from './config.js';
 import { createWarden, steerWarden, beamOrigin } from './warden.js';
-import { castBeams } from './beam.js';
-import { createShade, lightHarms, moveShades, SHADE_KINDS } from './shades.js';
-import { damageEclipse, updateEclipse } from './boss.js';
-import { startWave, updateDirector, waveCleared, WAVE_PLAN } from './waves.js';
+import { castPrismBeams } from './beam.js';
+import { createShade, lightHarmsShade, moveShades, SHADE_KINDS } from './shades.js';
+import { damageEclipsePhase, updateEclipse } from './boss.js';
+import { startWave, updateDirector, isWaveCleared, WAVE_PLAN } from './waves.js';
 import { beamStats, chainDamage, createUpgradeLevels, harvestChance } from './upgrades.js';
 import { burst, chainArc, floatText, sparks } from './particles.js';
 import { fxRandom, seedRandom, simRandom } from './random.js';
@@ -103,7 +103,7 @@ export function stepWorld(world, controls, dt) {
   const casting = controls.casting && world.state === 'fight';
   if (casting) {
     const origin = beamOrigin(world.warden);
-    world.beams = castBeams(world, origin.x, origin.y, world.warden.aimX, world.warden.aimY, world.warden.colour, world.upgrades);
+    world.beams = castPrismBeams(world, origin.x, origin.y, world.warden.aimX, world.warden.aimY, world.warden.colour, world.upgrades);
   } else {
     world.beams = [];
   }
@@ -122,7 +122,7 @@ export function stepWorld(world, controls, dt) {
 
   if (world.core.hp <= 0) {
     endRun(world, 'lost');
-  } else if (world.state === 'fight' && waveCleared(world)) {
+  } else if (world.state === 'fight' && isWaveCleared(world)) {
     world.stats.wavesCleared += 1;
     const bonus = 50 * world.wave;
     world.score += bonus;
@@ -191,7 +191,7 @@ function applyBeams(world, dt) {
       if (shade.dead) continue;
       const harms = shade.kind === 'eclipse'
         ? shade.entering <= 0 && shade.colour === beam.colour
-        : lightHarms(shade, hit.part, beam.colour);
+        : lightHarmsShade(shade, hit.part, beam.colour);
       if (!harms) {
         offTarget = true;
         if (fxRandom() < 0.3) sparks(hit.x, hit.y, -hit.dx, -hit.dy, '255,255,255', 1, 200, 1.3);
@@ -232,7 +232,7 @@ function applyBeams(world, dt) {
 }
 
 function hurtEclipse(world, boss, amount, colour) {
-  const result = damageEclipse(boss, amount);
+  const result = damageEclipsePhase(boss, amount);
   if (result === 'phase' || result === 'dead') {
     const points = (result === 'dead' ? 2000 : 500) * comboMultiplier(world);
     world.score += points;
@@ -300,7 +300,7 @@ function arcChain(world, from, colour, depth) {
   let target = null;
   let best = range * range;
   for (const shade of world.shades) {
-    if (shade.dead || shade === from || shade.shell || shade.kind === 'eclipse' || !lightHarms(shade, -1, colour)) continue;
+    if (shade.dead || shade === from || shade.shell || shade.kind === 'eclipse' || !lightHarmsShade(shade, -1, colour)) continue;
     const d = (shade.x - from.x) ** 2 + (shade.y - from.y) ** 2;
     if (d < best) {
       best = d;

@@ -2,7 +2,7 @@
   {
     "name": "1-play.jpg",
     "query": "?shot=play&seed=7",
-    "shows": "Wave 8 of 10 mid-run, chosen over the THE ECLIPSE boss frame (?shot=boss): the Warden casts a thick Verdant beam (lit in the colour bar) with Ember and Azure Prism branches bouncing off mirrors and walls, chain kills and floating scores, combo x3. The HUD explains the game in words: CORE 12/12 with '0 = RUN LOST', WAVE 8/10 with 'HOLD 2 MORE WAVES \u00b7 THEN THE ECLIPSE', score vs BEST 28,410, an INCOMING list of the Shades still to come with counts, an event log ('+75 CHAIN x3'), the rule strip 'MATCH THE BEAM TO THE SHADE' with the three colour/shape pairs, the colour selector and the named build (Prism II, Reflect II, Chain II, Lance I)."
+    "shows": "Wave 7 of 10, the most striking moment of ten autopilot runs: a thick Verdant main beam (lit in the colour bar) bounces off two mirror shards while its Prism branches in Ember and Azure reflect off another, the split striking Shades of different colours at once, each with its hit flash and stacked score popups. 16 Shades on the field and none hidden under a panel, combo x3, and the teaching HUD: CORE 12/12 with '0 = RUN LOST', 'HOLD 3 MORE WAVES \u00b7 THEN THE ECLIPSE', INCOMING with counts, an event log, the 'MATCH THE BEAM TO THE SHADE' strip and the named build."
   },
   {
     "name": "2-title.jpg",
@@ -12,11 +12,11 @@
   {
     "name": "3-upgrade.jpg",
     "query": "?shot=upgrade&seed=7",
-    "shows": "Between waves: WAVE 5 CLEARED and three upgrade cards, each with icon, name, level, effect and how it combines with the build ('with Prism: more kills start more arcs'), plus Core, score, next wave and YOUR BUILD by name and level."
+    "shows": "The moment before the boss: WAVE 9 CLEARED with a large 'NEXT: THE ECLIPSE' preview drawn by the boss's own renderer and its three phases (UMBRA, PENUMBRA, TOTALITY) named one per line, above three upgrade cards with icon, level, effect and how each combines with the build, plus Core, score and YOUR BUILD."
   },
   {
     "name": "4-results.jpg",
     "query": "?shot=results&seed=7",
-    "shows": "The results after beating THE ECLIPSE: VICTORY, waves cleared, Shades dispelled, colour accuracy, best combo, time, score 32,925 marked NEW BEST over the previous best 28,410, the build taken by name and level, and 'Press R or click to play again'."
+    "shows": "VICTORY with THE ECLIPSE drawn small beneath it, dimmed and cracked, then the stats (waves, Shades dispelled, colour accuracy, best combo, time), score 32,925 marked NEW BEST over the previous 28,410, the build taken by name and level, and 'Press R or click to play again'."
   }
 ]

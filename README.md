@@ -20,7 +20,7 @@ Survive ten waves. Each wave brings something new: Drifters, zig-zagging Darters
 | M | mute / unmute |
 | R | restart (on the results screen, a click works too) |
 
-The HUD teaches as you play. The Core panel states the stakes ("0 = RUN LOST"), and the wave panel names the goal ("HOLD 3 MORE WAVES · THEN THE ECLIPSE"). An INCOMING panel lists each Shade kind the wave still has to send, with its colours and count. A rule strip by the colour bar says "MATCH THE BEAM TO THE SHADE". Your build shows by name and level ("Prism II"), and a short event log reports chains, broken shells and Core cracks. Each upgrade card also says how it combines with what you already own.
+The HUD teaches as you play. The Core panel states the stakes ("0 = RUN LOST"), and the wave panel names the goal ("HOLD 3 MORE WAVES · THEN THE ECLIPSE"). An INCOMING panel lists each Shade kind the wave still has to send, with its colours and count. A rule strip by the colour bar says "MATCH THE BEAM TO THE SHADE". Your build shows by name and level ("Prism II"), and a short event log reports chains, broken shells and Core cracks. Each upgrade card also says how it combines with what you already own. When wave 9 is cleared, the upgrade screen previews THE ECLIPSE and names its three phases. The victory screen shows the boss cracked beneath the title. Score popups stack so they never cover each other.
 
 Every colour also has its own shape (on Shade shells, beam tips, the reticle and the HUD), so the game can be played without telling red from green. All art is drawn in code with Canvas 2D and additive light. All sound is synthesized with WebAudio (beam hum, hits, kills, wrong colour, Core cracks, waves, cards, boss phases, victory, defeat, plus a quiet generative music loop). Nothing is loaded from the network.
 
@@ -37,16 +37,16 @@ The game is plain static files in `game/`: ES modules, no build step and no thir
 | `game/js/input.js` | keyboard and mouse state in arena coordinates |
 | `game/js/world.js` | one run: the fixed step, damage, combo, score, the Core, win and loss |
 | `game/js/warden.js` | the player's lens: steering, collisions, aim, colour |
-| `game/js/beam.js` | ray casting, mirror and wall reflection, Prism branches, hits |
+| `game/js/beam.js` | Prism splitting (`castPrismBeams`), reflection (`reflectDirection`), ray tracing, hits |
 | `game/js/arena.js` | mirror shard layouts, bounds, collision push-out |
-| `game/js/shades.js` | enemy kinds, movement, which light harms which part |
-| `game/js/waves.js` | the ten-wave plan and spawn director |
-| `game/js/boss.js` | THE ECLIPSE and its three phases |
+| `game/js/shades.js` | enemy kinds, the colour rule (`lightHarmsShade`), movement |
+| `game/js/waves.js` | the ten-wave plan, the run's goal (`waveGoalText`), spawn director, INCOMING counts |
+| `game/js/boss.js` | THE ECLIPSE: its three phases (`ECLIPSE_PHASES`, `damageEclipsePhase`), orbit and summons |
 | `game/js/upgrades.js` | upgrade cards, dealing, effects, synergy lines, derived stats |
 | `game/js/particles.js` | pooled particles, chain arcs and floating score text |
 | `game/js/render.js` | the arena scene with additive glow |
 | `game/js/hud.js` | Core and stakes, wave goal and progress, score and combo, INCOMING list, rule strip, colour selector, named build, event log, hints |
-| `game/js/screens.js` | title, upgrade cards, results, pause |
+| `game/js/screens.js` | title, upgrade cards with THE ECLIPSE preview, results, pause |
 | `game/js/icons.js` | colour shapes and upgrade icons |
 | `game/js/audio.js` | WebAudio sound effects and generative music |
 | `game/js/storage.js` | best score and mute setting in localStorage |
