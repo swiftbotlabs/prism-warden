@@ -5,13 +5,16 @@ import { fxRandom, fxRange } from './random.js';
 const MAX_PARTICLES = 1800;
 const MAX_FLOATERS = 40;
 const MAX_ARCS = 24;
+const MAX_RINGS = 24;
 
 const particles = Array.from({ length: MAX_PARTICLES }, () => ({ live: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: 2, rgb: '255,255,255', drag: 0.9 }));
 const floaters = Array.from({ length: MAX_FLOATERS }, () => ({ live: false, x: 0, y: 0, text: '', life: 0, max: 1, colour: '#fff', size: 18 }));
 const arcs = Array.from({ length: MAX_ARCS }, () => ({ live: false, points: [], life: 0, max: 0.3, rgb: '255,255,255' }));
 let nextParticle = 0;
 let nextFloater = 0;
+const rings = Array.from({ length: MAX_RINGS }, () => ({ live: false, x: 0, y: 0, life: 0, max: 0.4, radius: 40, rgb: '255,255,255' }));
 let nextArc = 0;
+let nextRing = 0;
 
 export function spawnParticle(x, y, vx, vy, life, size, rgb, drag = 0.92) {
   const p = particles[nextParticle];
@@ -66,6 +69,18 @@ export function chainArc(x1, y1, x2, y2, rgb) {
   }
 }
 
+/** A kill flash: a bright ring in the Shade's colour that swells and fades around where it died. */
+export function killRing(x, y, rgb, radius = 46) {
+  const ring = rings[nextRing];
+  nextRing = (nextRing + 1) % MAX_RINGS;
+  ring.live = true;
+  ring.x = x;
+  ring.y = y;
+  ring.life = ring.max;
+  ring.radius = radius;
+  ring.rgb = rgb;
+}
+
 /** Rising score or label text; a new one stacks above any it would overlap, so popups never cover each other. */
 export function floatText(x, y, text, colour, size = 18, life = 0.9) {
   const halfWidth = text.length * size * 0.3;
@@ -106,6 +121,11 @@ export function updateEffects(dt) {
     f.y -= 38 * dt;
     if (f.life <= 0) f.live = false;
   }
+  for (const ring of rings) {
+    if (!ring.live) continue;
+    ring.life -= dt;
+    if (ring.life <= 0) ring.live = false;
+  }
   for (const arc of arcs) {
     if (!arc.live) continue;
     arc.life -= dt;
@@ -129,6 +149,7 @@ export function clearEffects() {
   for (const p of particles) p.live = false;
   for (const f of floaters) f.live = false;
   for (const arc of arcs) arc.live = false;
+  for (const ring of rings) ring.live = false;
 }
 
 export function liveParticleCount() {
@@ -147,6 +168,17 @@ export function drawParticles(ctx) {
     const s = p.size * (0.4 + 0.6 * k);
     ctx.fillStyle = `rgba(${p.rgb},${(k * 0.9).toFixed(2)})`;
     ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+  }
+  for (const ring of rings) {
+    if (!ring.live) continue;
+    const k = ring.life / ring.max;
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, ring.radius * (1.15 - k), 0, TAU);
+    ctx.strokeStyle = `rgba(${ring.rgb},${(0.9 * k).toFixed(2)})`;
+    ctx.lineWidth = 3 + 7 * k;
+    ctx.stroke();
+    ctx.fillStyle = `rgba(255,255,255,${(0.35 * k * k).toFixed(2)})`;
+    ctx.fill();
   }
   ctx.lineJoin = 'round';
   for (const arc of arcs) {

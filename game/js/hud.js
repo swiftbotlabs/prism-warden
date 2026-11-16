@@ -3,7 +3,7 @@
 import { ARENA_H, ARENA_W, COMBO_TUNING, FONT, LIGHTS, PALETTE, TOTAL_WAVES } from './config.js';
 import { drawLightGlyph, drawShadeIcon, drawUpgradeIcon, traceShape } from './icons.js';
 import { upgradeLabel, UPGRADES } from './upgrades.js';
-import { incomingByKind, waveGoalText, waveProgress, WAVE_PLAN } from './waves.js';
+import { incomingByKind, RUN_CONDITIONS, waveGoalText, waveProgress, WAVE_PLAN } from './waves.js';
 import { comboMultiplier } from './world.js';
 import { eclipseTitle } from './boss.js';
 import { SHADE_KINDS } from './shades.js';
@@ -67,6 +67,7 @@ export function hudPanelRects(world) {
   const rects = [
     { x: 16, y: 14, w: 320, h: 90 },
     { x: ARENA_W / 2 - 180, y: 14, w: 360, h: 90 },
+    { x: ARENA_W / 2 - 290, y: 108, w: 580, h: 36 },
     { x: ARENA_W - 316, y: 14, w: 300, h: 80 },
     { x: ARENA_W / 2 - 300, y: ARENA_H - 107, w: 600, h: 30 },
     { x: ARENA_W / 2 - 238, y: ARENA_H - 62, w: 476, h: 46 },
@@ -82,7 +83,7 @@ export function hudPanelRects(world) {
     const rows = Math.ceil(owned / 3);
     rects.push({ x: 16, y: ARENA_H - 46 - (rows - 1) * 34 - 22, w: 3 * 122, h: (rows - 1) * 34 + 52 });
   }
-  if (world.boss && !world.boss.dead) rects.push({ x: ARENA_W / 2 - 250, y: 112, w: 500, h: 46 });
+  if (world.boss && !world.boss.dead) rects.push({ x: ARENA_W / 2 - 250, y: 150, w: 500, h: 46 });
   return rects;
 }
 
@@ -120,16 +121,39 @@ function drawWavePanel(ctx, world) {
   text(ctx, plan.title.toUpperCase(), cx, 56, 14, PALETTE.dim, 'center', 700);
   bar(ctx, cx - 155, 65, 310, 6, waveProgress(world), PALETTE.gold);
   text(ctx, waveGoalText(world.wave), cx, 87, 16, PALETTE.gold, 'center', 900);
+  drawWinLoseLine(ctx, cx, 126, 17, true);
   const boss = world.boss;
   if (boss && !boss.dead) {
-    drawPanel(ctx, cx - 250, 112, 500, 46, 10, 'rgba(10,6,24,0.85)', `rgba(${LIGHTS[boss.colour].rgb},0.6)`);
-    text(ctx, eclipseTitle(boss), cx, 126, 14, PALETTE.ink, 'center');
+    drawPanel(ctx, cx - 250, 150, 500, 46, 10, 'rgba(10,6,24,0.85)', `rgba(${LIGHTS[boss.colour].rgb},0.6)`);
+    text(ctx, eclipseTitle(boss), cx, 164, 14, PALETTE.ink, 'center');
     for (let i = 0; i < 3; i += 1) {
       const x = cx - 234 + i * 158;
       const ratio = i < boss.phase ? 0 : i > boss.phase ? 1 : boss.hp / boss.maxHp;
-      bar(ctx, x, 140, 152, 10, ratio, i === boss.phase ? LIGHTS[boss.colour].hex : 'rgba(236,233,255,0.5)');
+      bar(ctx, x, 178, 152, 10, ratio, i === boss.phase ? LIGHTS[boss.colour].hex : 'rgba(236,233,255,0.5)');
     }
   }
+}
+
+/** Width of the WIN / LOSE line at `size` (with an optional lead-in), for layout. */
+function winLoseWidth(ctx, size, prefix) {
+  return textWidth(ctx, prefix, size, 900) + textWidth(ctx, 'WIN: ', size, 900) + textWidth(ctx, `${RUN_CONDITIONS.win}  ·  `, size, 700)
+    + textWidth(ctx, 'LOSE: ', size, 900) + textWidth(ctx, RUN_CONDITIONS.lose, size, 700);
+}
+
+/** "WIN: break THE ECLIPSE after wave 10 · LOSE: the Core shatters", centred on (cx, y), optionally on a pill and after a gold lead-in. */
+export function drawWinLoseLine(ctx, cx, y, size, onPill = false, prefix = '') {
+  const width = winLoseWidth(ctx, size, prefix);
+  if (onPill) drawPanel(ctx, cx - width / 2 - 18, y - size * 0.95, width + 36, size * 1.9, size, 'rgba(12,10,32,0.82)', 'rgba(255,212,110,0.5)');
+  let x = cx - width / 2;
+  const part = (value, colour, weight) => {
+    text(ctx, value, x, y + 1, size, colour, 'left', weight);
+    x += textWidth(ctx, value, size, weight);
+  };
+  if (prefix) part(prefix, PALETTE.gold, 900);
+  part('WIN: ', '#8dffc4', 900);
+  part(`${RUN_CONDITIONS.win}  ·  `, '#ffffff', 700);
+  part('LOSE: ', '#ff8a9a', 900);
+  part(RUN_CONDITIONS.lose, '#ffffff', 700);
 }
 
 function drawScorePanel(ctx, world, best) {

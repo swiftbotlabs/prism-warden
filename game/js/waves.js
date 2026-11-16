@@ -28,6 +28,9 @@ export const WAVE_PLAN = [
     hint: 'Match the Eclipse\'s colour to break its phases. Survive all three.' },
 ];
 
+/** How a run is won and lost, in the words the HUD, the title and the results use. */
+export const RUN_CONDITIONS = { win: `break THE ECLIPSE after wave ${TOTAL_WAVES}`, lose: 'the Core shatters' };
+
 /** The run's goal as the HUD states it: hold the waves, then break THE ECLIPSE on the last one to win. */
 export function waveGoalText(wave) {
   const left = TOTAL_WAVES - wave;

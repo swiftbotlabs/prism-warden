@@ -1,7 +1,7 @@
 // The menu screens: the title (with a live beam show), the upgrade choice of three cards, the results (VICTORY / CORE SHATTERED) and pause.
 import { ARENA_H, ARENA_W, CORE_X, CORE_Y, FONT, LIGHTS, PALETTE, TAU, TOTAL_WAVES } from './config.js';
 import { drawLightGlyph, drawUpgradeIcon } from './icons.js';
-import { drawPanel } from './hud.js';
+import { drawPanel, drawWinLoseLine } from './hud.js';
 import { drawEclipse, drawWorld } from './render.js';
 import { makeMirror } from './arena.js';
 import { castPrismBeams } from './beam.js';
@@ -120,10 +120,13 @@ export function drawTitle(ctx, scene, best, time) {
   ctx.strokeStyle = 'rgba(255,255,255,0.85)';
   ctx.strokeText('PRISM WARDEN', ARENA_W / 2, 104);
   ctx.restore();
-  text(ctx, 'Bend light. Hold the core.', ARENA_W / 2, 164, 26, '#f4f0ff', 'center', 600);
+  text(ctx, 'Bend light. Hold the core.', ARENA_W / 2, 156, 26, '#f4f0ff', 'center', 600);
+  drawObjectiveLine(ctx, ARENA_W / 2, 196);
   const shadeKinds = Object.keys(SHADE_KINDS).filter((kind) => kind !== 'eclipse').length;
   const phases = ['one', 'two', 'three', 'four'][ECLIPSE_PHASES.length - 1] ?? ECLIPSE_PHASES.length;
-  text(ctx, `${TOTAL_WAVES} waves · ${shadeKinds} kinds of Shade · ${UPGRADES.length} upgrades · a ${phases}-phase boss`, ARENA_W / 2, 204, 21, PALETTE.gold, 'center', 800);
+  text(ctx, `${TOTAL_WAVES} waves · ${shadeKinds} kinds of Shade · ${UPGRADES.length} upgrades · a ${phases}-phase boss`, ARENA_W / 2, 232, 19, PALETTE.gold, 'center', 800);
+  ctx.save();
+  ctx.translate(0, 24);
 
   drawPanel(ctx, 36, 236, 330, 300, 14);
   text(ctx, 'CONTROLS', 60, 266, 18, PALETTE.gold, 'left');
@@ -152,12 +155,18 @@ export function drawTitle(ctx, scene, best, time) {
   });
   const notes = ['Mirrors bounce your beam', 'Shades that reach the Core crack it', `Survive ${TOTAL_WAVES} waves and THE ECLIPSE`, 'Pick an upgrade after each wave'];
   notes.forEach((note, index) => text(ctx, note, ARENA_W - 342, 428 + index * 28, 16, PALETTE.dim, 'left', 600));
+  ctx.restore();
 
   const pulse = 0.6 + 0.4 * Math.sin(time * 3.5);
   drawPanel(ctx, ARENA_W / 2 - 190, 640, 380, 64, 32, `rgba(255,212,110,${0.12 + 0.12 * pulse})`, `rgba(255,212,110,${0.5 + 0.5 * pulse})`);
   text(ctx, 'CLICK TO BEGIN', ARENA_W / 2, 673, 32, '#ffffff', 'center', 900);
   text(ctx, best > 0 ? `BEST SCORE ${best.toLocaleString('en-US')}` : 'NO BEST SCORE YET · SET ONE', ARENA_W / 2, 734, 18, PALETTE.gold, 'center', 800);
   text(ctx, 'An original game of light and colour · all art and sound made in code', ARENA_W / 2, 772, 14, PALETTE.faint, 'center', 600);
+}
+
+/** "OBJECTIVE" followed by the same WIN / LOSE line the play HUD shows. */
+function drawObjectiveLine(ctx, cx, y) {
+  drawWinLoseLine(ctx, cx, y, 21, true, 'OBJECTIVE   ');
 }
 
 // ----- Upgrade choice ----------------------------------------------------------------------------------------
@@ -344,7 +353,8 @@ export function drawResults(ctx, world, best, isNewBest, previousBest, time) {
   const pulse = 0.6 + 0.4 * Math.sin(time * 3.5);
   drawPanel(ctx, ARENA_W / 2 - 250, 628, 500, 60, 30, `rgba(255,212,110,${0.1 + 0.12 * pulse})`, `rgba(255,212,110,${0.5 + 0.5 * pulse})`);
   text(ctx, 'Press R or click to play again', ARENA_W / 2, 659, 26, '#ffffff', 'center', 800);
-  text(ctx, 'Esc returns to the title', ARENA_W / 2, 716, 16, PALETTE.dim, 'center', 600);
+  text(ctx, 'Esc returns to the title', ARENA_W / 2, 712, 16, PALETTE.dim, 'center', 600);
+  if (won) text(ctx, `Lose the Core and the run ends: CORE SHATTERED · press R to try again`, ARENA_W / 2, 744, 16, '#ff9aa8', 'center', 700);
 }
 
 /** The beaten boss under VICTORY: THE ECLIPSE drawn small by its own renderer, dimmed and cracked. */

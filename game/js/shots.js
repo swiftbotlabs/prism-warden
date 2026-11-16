@@ -1,9 +1,9 @@
 // Screenshot scenes behind ?shot=title|play|upgrade|boss|results|defeat&seed=n: the real game played forward by the autopilot at fixed steps, frozen on the moment.
-import { CORE_X, CORE_Y, STEP } from './config.js';
+import { CORE_RADIUS, CORE_X, CORE_Y, STEP, WHITE } from './config.js';
 import { autopilotControls, autopilotPick, createPilot } from './autopilot.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
 import { applyUpgrade, dealUpgradeCards } from './upgrades.js';
-import { clearEffects, floaterColours, floatersNear, liveParticleCount, updateEffects } from './particles.js';
+import { clearEffects, floatersNear, liveParticleCount, updateEffects } from './particles.js';
 import { hudPanelRects } from './hud.js';
 import { harmingColour, lightHarmsShade } from './shades.js';
 import { loadBestScore, saveBestScore } from './storage.js';
@@ -22,7 +22,7 @@ const RECORDED_BEST = 28410;
 /** The cover's pilot re-thinks its target every 0.3 s, like a person, so a crowd builds up as it would in a real run. */
 const COVER_REACTION = 0.3;
 /** The cover weighs the best moment across this many runs (seed, seed + 101, ...) rather than settling for the first. */
-const COVER_SEEDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const COVER_SEEDS = Array.from({ length: 20 }, (_, n) => n);
 
 /**
  * Plays a run with the autopilot until `stop(world, step)` says so (checked once a step), taking upgrades on the way.
@@ -105,18 +105,28 @@ function waveDrama(world) {
   if (world.wave < 7 || world.wave > 8 || world.state !== 'fight' || world.banner) return -1;
   const warden = world.warden;
   if (world.core.hp < world.core.maxHp * 0.6 || warden.y < 180 || warden.y > 630 || warden.x < 340 || warden.x > 1010) return -1;
-  if (floatersNear(CORE_X, CORE_Y, 90) > 0 || floatersNear(CORE_X, CORE_Y, 2000) < 2 || !beamsReadable(world, 150, 120, 3)) return -1;
+  const popups = floatersNear(CORE_X, CORE_Y, 2000);
+  if (floatersNear(CORE_X, CORE_Y, 90) > 0 || popups < 1 || popups > 2 || !beamsReadable(world, 150, 120, 3)) return -1;
+  if (world.shades.some((s) => !s.dead && Math.hypot(s.x - CORE_X, s.y - CORE_Y) < CORE_RADIUS + s.r + 50)) return -1;
+  if (!justDiedToOwnColour(world)) return -1;
   const main = beamLengths(world.beams[0]);
   const facts = frameFacts(world);
   const recentLog = world.log.filter((entry) => world.time - entry.time < 3).length;
-  if (world.combo < 10 || facts.onScreen.length < 7 || facts.colours < 3) return -1;
+  if (world.combo < 10 || facts.onScreen.length < 7 || facts.onScreen.length > 12 || facts.colours < 3) return -1;
   const incoming = incomingByKind(world);
-  const stillToCome = incoming.reduce((sum, row) => sum + row.count, 0);
   if (incoming.length < 3 || recentLog < 2) return -1;
   const struck = prismStrikes(world);
-  if (struck.beams < 2 || struck.colours < 2 || floaterColours().size < 2 || shadeUnderHud(world)) return -1;
-  return Math.min(main.total, 700) / 70 + facts.onScreen.length * 2 + facts.kinds * 3 + Math.min(facts.bounces, 5) * 3 + facts.hits * 2
-    + Math.min(world.combo, 40) / 2 + liveParticleCount() / 60 + recentLog * 2 + incoming.length * 3 + Math.min(stillToCome, 12) / 2 + struck.colours * 6 + struck.beams * 3;
+  if (struck.beams < 2 || struck.colours < 2 || shadeUnderHud(world)) return -1;
+  return Math.min(main.total, 700) / 70 + facts.onScreen.length + facts.kinds * 3 + Math.min(facts.bounces, 4) * 3
+    + Math.min(world.combo, 40) / 4 + recentLog * 2 + incoming.length * 3 + struck.colours * 8 + struck.beams * 4;
+}
+
+/** The colour rule in action: a Shade died to light of its own colour a moment ago, its burst in clear view. */
+function justDiedToOwnColour(world) {
+  const kill = world.lastKill;
+  if (!kill || world.time - kill.time > 0.3 || kill.colour !== kill.beamColour || kill.colour === WHITE) return false;
+  if (kill.x < 40 || kill.x > 1240 || kill.y < 40 || kill.y > 760) return false;
+  return !hudPanelRects(world).some((r) => kill.x > r.x - 30 && kill.x < r.x + r.w + 30 && kill.y > r.y - 30 && kill.y < r.y + r.h + 30);
 }
 
 /**

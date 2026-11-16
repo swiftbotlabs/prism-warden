@@ -33,7 +33,7 @@ export function drawGlow(ctx, x, y, radius, rgb, alpha = 1) {
   ctx.globalAlpha = previous;
 }
 
-/** Pre-renders the ground (indigo gradient, faint hex grid, vignette) at the screen's pixel ratio. */
+/** Pre-renders the ground (deep indigo with a lit centre, hex grid, soft vignette) at the screen's pixel ratio. */
 export function buildBackdrop(pixelRatio) {
   backdrop = document.createElement('canvas');
   backdrop.width = Math.round(ARENA_W * pixelRatio);
@@ -43,8 +43,8 @@ export function buildBackdrop(pixelRatio) {
   g.fillStyle = PALETTE.ground;
   g.fillRect(0, 0, ARENA_W, ARENA_H);
   const halo = g.createRadialGradient(CORE_X, CORE_Y, 20, CORE_X, CORE_Y, 620);
-  halo.addColorStop(0, 'rgba(60,52,150,0.55)');
-  halo.addColorStop(0.5, 'rgba(30,24,90,0.25)');
+  halo.addColorStop(0, 'rgba(92,80,200,0.6)');
+  halo.addColorStop(0.5, 'rgba(52,44,140,0.32)');
   halo.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = halo;
   g.fillRect(0, 0, ARENA_W, ARENA_H);
@@ -78,7 +78,7 @@ export function buildBackdrop(pixelRatio) {
   }
   const vignette = g.createRadialGradient(ARENA_W / 2, ARENA_H / 2, 300, ARENA_W / 2, ARENA_H / 2, 820);
   vignette.addColorStop(0, 'rgba(0,0,0,0)');
-  vignette.addColorStop(1, 'rgba(0,0,6,0.6)');
+  vignette.addColorStop(1, 'rgba(4,2,16,0.38)');
   g.fillStyle = vignette;
   g.fillRect(0, 0, ARENA_W, ARENA_H);
 }
