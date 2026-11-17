@@ -97,10 +97,10 @@ export const CHARGE_TIME = 1.5;
 /** A legion of minions from the arena edges, spread round the field, their colours rotating through all three lights. */
 function summonLegion(world, kinds) {
   const offset = Math.floor(simRandom() * 3);
-  kinds.forEach((kind, i) => {
+  for (let i = 0; i < kinds.length + (world.legionBonus ?? 0); i += 1) {
     const point = edgeSpawnPoint(simRandom);
-    world.shades.push(createShade(kind, (offset + i) % 3, point.x, point.y, world.speedScale, false, world.toughness));
-  });
+    world.shades.push(createShade(kinds[i % kinds.length], (offset + i) % 3, point.x, point.y, world.speedScale, false, world.toughness));
+  }
 }
 
 /** The Shadow Ring: Umbra orbs fly out from the boss in every direction; any light cuts them, and those reaching the Core crack it. */

@@ -1,6 +1,6 @@
 // Finds the cover frame offline: plays many autopilot runs in Node with the game's own rules, scores every step, and writes
 // the best seed and step into shots.json for 1-play.jpg (the game's ?shot=play replays exactly that step in the browser).
-// Usage: node tools/find-cover.mjs [boss|wave] [runs]
+// Usage: node tools/find-cover.mjs [boss|wave] [runs] [--any-phase] [--legion=N] [--write]
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ARENA_H, ARENA_W, CORE_RADIUS, CORE_X, CORE_Y, WHITE } from '../game/js/config.js';
 import { createPilot } from '../game/js/autopilot.js';
@@ -10,6 +10,7 @@ import { lightHarmsShade } from '../game/js/shades.js';
 import { ECLIPSE_PHASES } from '../game/js/boss.js';
 import { incomingByKind } from '../game/js/waves.js';
 import { UPGRADES } from '../game/js/upgrades.js';
+import { comboMultiplier } from '../game/js/world.js';
 
 const mode = process.argv[2] ?? 'boss';
 const runs = Number(process.argv[3] ?? 300);
@@ -66,34 +67,65 @@ function branchStrikes(world) {
   return colours;
 }
 
+/** How many frames each cover rule rejected, printed with the result so the binding rule is visible. */
+const rejected = {};
+function reject(reason) {
+  rejected[reason] = (rejected[reason] ?? 0) + 1;
+  return -1;
+}
+
+/** Distance from (x, y) to a beam's polyline. */
+function distanceToBeam(beam, x, y) {
+  let best = Infinity;
+  for (let i = 2; i < beam.points.length; i += 2) {
+    const [ax, ay, bx, by] = [beam.points[i - 2], beam.points[i - 1], beam.points[i], beam.points[i + 1]];
+    const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2 || 1)));
+    best = Math.min(best, Math.hypot(x - ax - (bx - ax) * t, y - ay - (by - ay) * t));
+  }
+  return best;
+}
+
+const ANY_PHASE = process.argv.includes('--any-phase');
+/** Extra minions per ECLIPSE legion in the seeded cover replay (normal play keeps 0). */
+const LEGION = Number((process.argv.find((a) => a.startsWith('--legion=')) ?? '--legion=0').split('=')[1]);
+
 function bossDrama(world) {
   const boss = world.boss;
-  if (world.state !== 'fight' || world.banner || !boss || boss.dead || boss.entering > 0 || world.director.elapsed < 15 || world.combo < 3) return -1;
+  if (world.state !== 'fight' || world.banner || !boss || boss.dead || boss.entering > 0 || world.director.elapsed < 15) return -1;
   const health = (ECLIPSE_PHASES.length - 1 - boss.phase + boss.hp / boss.maxHp) / ECLIPSE_PHASES.length;
   const main = world.beams[0];
-  if (health < 0.3 || health > 0.7 || world.core.hp < world.core.maxHp * 0.5 || !main || main.colour !== boss.colour || !main.hits.some((hit) => hit.shade === boss)) return -1;
+  if (!main || main.colour !== boss.colour || !main.hits.some((hit) => hit.shade === boss)) return reject('warden not casting the boss colour into it');
+  if (!ANY_PHASE && (health < 0.3 || health > 0.7)) return reject('boss health outside 30-70%');
+  if (world.core.hp < world.core.maxHp * (10 / 12)) return reject('Core below 10/12');
+  if (comboMultiplier(world) < 3) return reject('multiplier below x3');
   // The boss in the middle 60% of the arena, with open floor between it and the Core.
-  if (boss.x < ARENA_W * 0.2 || boss.x > ARENA_W * 0.8 || boss.y < ARENA_H * 0.2 || boss.y > ARENA_H * 0.8) return -1;
+  if (boss.x < ARENA_W * 0.2 || boss.x > ARENA_W * 0.8 || boss.y < ARENA_H * 0.2 || boss.y > ARENA_H * 0.8) return reject('boss outside the middle 60%');
   const coreGap = Math.hypot(boss.x - CORE_X, boss.y - CORE_Y) - boss.r - CORE_RADIUS;
-  if (coreGap < 140) return -1;
+  if (coreGap < 140) return reject('boss too close to the Core');
   // The threat: a Shadow Ring burst in flight, or the ring tightening.
   const orbs = world.shades.filter((s) => s.kind === 'umbra' && !s.dead && s.x > 0 && s.x < ARENA_W && s.y > 0 && s.y < ARENA_H).length;
-  if (orbs < 4 && boss.charging <= 0) return -1;
-  // The response: Prism branches bouncing at least twice and harming minions of the other colours.
+  if (orbs < 4 && boss.charging <= 0) return reject('no Shadow Ring threat');
+  // The response: Prism branches bouncing at least twice and harming creatures of the other colours.
   const branchBounces = world.beams.slice(1).reduce((sum, beam) => sum + beam.bounces.length / 2, 0);
   const struck = [...branchStrikes(world)].filter((c) => c !== boss.colour);
-  if (world.beams.length < 2 || branchBounces < 2 || struck.length < 1) return -1;
+  if (world.beams.length < 2 || branchBounces < 2 || struck.length < 1) return reject('branches not bouncing into other colours');
+  // The battle: at least 8 creatures on screen in two or more colours, some close to the beams.
+  const creatures = world.shades.filter((s) => !s.dead && s.kind !== 'eclipse' && s.age > 0.35 && s.x > 25 && s.x < ARENA_W - 25 && s.y > 25 && s.y < ARENA_H - 25
+    && Math.hypot(s.x - boss.x, s.y - boss.y) > boss.r * 1.3);
+  const colours = new Set(creatures.map((s) => s.colour).filter((c) => c !== WHITE)).size;
+  const nearBeams = creatures.filter((s) => world.beams.some((beam) => distanceToBeam(beam, s.x, s.y) < 250)).length;
+  if (creatures.length < 8) return reject('fewer than 8 creatures on screen');
+  if (colours < 2 || nearBeams < 3) return reject('creatures not in two colours near the beams');
   const popups = floatersNear(CORE_X, CORE_Y, 2000);
-  const minions = visibleMinions(world);
-  const colours = new Set(minions.map((s) => s.colour).filter((c) => c !== WHITE)).size;
-  if (popups < 1 || popups > 3 || minions.length < 3 || colours < 2 || !framedClear(world)) return -1;
+  if (floatersNear(boss.x, boss.y, boss.r) > 0) return reject('popup over the boss face');
+  if (!framedClear(world)) return reject('something under the HUD');
   // A clear triangle: boss, Warden and Core apart, with open floor on every side.
   const w = world.warden;
   const shortest = Math.min(Math.hypot(w.x - boss.x, w.y - boss.y) - boss.r, Math.hypot(w.x - CORE_X, w.y - CORE_Y) - CORE_RADIUS, coreGap);
-  if (shortest < 70) return -1;
-  return Math.min(minions.length, 10) * 2 + colours * 4 + struck.length * 6 + Math.min(branchBounces, 4) * 3 + world.beams.length * 3
-    + (popups === 1 ? 6 : 0) + (world.core.hp / world.core.maxHp) * 8 + Math.min(orbs, 10) * 2 + (boss.charging > 0 ? 6 : 0)
-    + Math.min(shortest, 260) / 15 + Math.min(world.combo, 20) / 2 + (1 - Math.abs(health - 0.5)) * 6;
+  if (shortest < 70) return reject('no clear boss-Warden-Core triangle');
+  return Math.min(creatures.length, 16) * 2 + colours * 4 + nearBeams + struck.length * 6 + Math.min(branchBounces, 4) * 3 + world.beams.length * 3
+    + (popups === 1 ? 4 : 0) + (world.core.hp / world.core.maxHp) * 8 + Math.min(orbs, 10) + (boss.charging > 0 ? 6 : 0)
+    + Math.min(shortest, 260) / 15 + Math.min(comboMultiplier(world), 6) * 2;
 }
 
 function waveDrama(world) {
@@ -115,15 +147,17 @@ for (let n = 0; n < runs; n += 1) {
   clearEffects();
   playUntil(seed, (world, step) => {
     const score = drama(world);
-    if (score > best.score) best = { seed, step, score };
+    if (score > best.score) best = { seed, step, score, world: { creatures: world.shades.filter((x) => !x.dead && x.kind !== 'eclipse' && x.age > 0.35 && x.x > 25 && x.x < ARENA_W - 25 && x.y > 25 && x.y < ARENA_H - 25 && Math.hypot(x.x - world.boss.x, x.y - world.boss.y) > world.boss.r * 1.3).length, multiplier: comboMultiplier(world), core: `${Math.ceil(world.core.hp)}/${world.core.maxHp}` } };
     return done(world);
-  }, createPilot(REACTION, 0, focus));
+  }, createPilot(REACTION, 0, focus), LEGION);
 }
+console.log('rejected by rule:', JSON.stringify(rejected));
 if (best.step < 0) {
   console.log(`no ${mode} frame passed`);
   process.exit(1);
 }
-const query = `?shot=play&seed=${best.seed}&step=${best.step}&reaction=${REACTION}${focus ? '&focus=1' : ''}`;
+const query = `?shot=play&seed=${best.seed}&step=${best.step}&reaction=${REACTION}${focus ? '&focus=1' : ''}${LEGION ? `&legion=${LEGION}` : ''}`;
+if (best.world) console.log(`frame: ${best.world.creatures} creatures, x${best.world.multiplier}, Core ${best.world.core}`);
 console.log(`best ${mode} frame: score ${best.score.toFixed(1)} ${query}`);
 if (process.argv.includes('--write')) {
   const path = new URL('../shots.json', import.meta.url);

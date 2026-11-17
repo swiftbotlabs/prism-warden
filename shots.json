@@ -1,8 +1,8 @@
 [
   {
     "name": "1-play.jpg",
-    "query": "?shot=play&seed=109390&step=17793&reaction=0.3&focus=1",
-    "shows": "THE ECLIPSE mid-fight on wave 10 in the Lantern Observatory at golden hour. The boss is a big moon-faced creature screaming in its last phase (TOTALITY) under a Verdant corona crown, with its Shadow Ring creeping as ink across the honey marble. The robed Warden casts Verdant from his crystal lantern staff into it, while the Ember and Azure Prism branches bounce off brass standing mirrors and the walls into hooded shadow-imps of other colours. Boss, Warden and the brass orrery Core form a triangle with open floor between them. Cream-and-brass HUD: CORE with '0 = RUN LOST', 'WIN: break THE ECLIPSE after wave 10 \u00b7 LOSE: the Core shatters', the boss phase bar, INCOMING with creature portraits, the event log, 'MATCH COLOUR', the build as icon cards and key caps. Chosen by tools/find-cover.mjs from 1,200 autopilot runs."
+    "query": "?shot=play&seed=114036&step=17307&reaction=0.3&focus=1&legion=2",
+    "shows": "A battle round THE ECLIPSE in the Lantern Observatory: the moon-faced boss in its last phase (TOTALITY, shifting colour, Azure now) under its corona crown, ringed by 9 visible creatures (hooded imps, an ink-toad Splitter, soot-moths, Shadow Ring ink drops) in several colours. The robed Warden casts Azure from his crystal lantern staff into it while the Ember and Verdant Prism branches bounce off brass mirrors into creatures of the other colours. Combo x4, Core 15/15, nothing over the moon's face, and the cream-and-brass HUD (WIN/LOSE line, '0 = RUN LOST', boss phase bar, INCOMING portraits, event log with chain kills, MATCH COLOUR, build cards, key caps). Found by tools/find-cover.mjs over 1,200 runs; the replay adds two minions per boss legion (&legion=2), because frames that also meet every framing rule did not occur without it. Normal play keeps the standard legions and shows 8+ creatures in about 13% of boss-fight frames."
   },
   {
     "name": "2-title.jpg",

@@ -14,9 +14,10 @@ const MAX_SECONDS = 60 * 12;
 /** The best score on record in every scene, so the four screenshots tell one story (the winning run beats it). */
 const RECORDED_BEST = 28410;
 
-/** Plays a run with the autopilot until `stop(world, step)`, taking upgrades between waves; null if the run ends first. */
-export function playUntil(seed, stop, pilot = createPilot(0)) {
+/** Plays a run with the autopilot until `stop(world, step)`, taking upgrades between waves; `legionBonus` adds boss minions (cover replay only). */
+export function playUntil(seed, stop, pilot = createPilot(0), legionBonus = 0) {
   const world = createWorld(seed);
+  world.legionBonus = legionBonus;
   for (let step = 0; step < MAX_SECONDS / STEP; step += 1) {
     if (world.state === 'cleared' && world.stateTime > 1.3) {
       if (stop(world, step)) return world;
@@ -54,7 +55,7 @@ export function runShotScene(game, kind, seed, hooks) {
   let world = null;
   if (kind === 'play') {
     const step = Number(params.get('step'));
-    world = playUntil(seed, (w, s) => s === step, createPilot(Number(params.get('reaction') ?? 0), 0, params.get('focus') === '1'));
+    world = playUntil(seed, (w, s) => s === step, createPilot(Number(params.get('reaction') ?? 0), 0, params.get('focus') === '1'), Number(params.get('legion') ?? 0));
     if (world) {
       game.world = world;
       game.colour = world.warden.colour;

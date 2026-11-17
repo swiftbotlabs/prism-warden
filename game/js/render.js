@@ -261,7 +261,8 @@ function drawShade(ctx, shade, time) {
   ctx.globalAlpha = Math.min(1, shade.age * 4);
   ctx.translate(x + (shade.flash > 0 ? Math.sin(time * 90) * 3 : 0), y);
   ctx.scale(1 + squash, 1 - squash);
-  const size = r * (shade.kind === 'bulwark' ? 2.8 : shade.kind === 'umbra' ? 3.6 : 4.2);
+  const size = r * (shade.kind === 'bulwark' ? 3.5 : shade.kind === 'umbra' ? 4.5 : 5.25);
+  const reach = r * 1.25;
   drawCreature(ctx, shade.kind, shade.colour, 0, 0, size, CORE_X < x);
   if (shade.flash > 0) {
     ctx.globalCompositeOperation = 'lighter';
@@ -275,7 +276,7 @@ function drawShade(ctx, shade, time) {
       const from = shade.rot + index * third + 0.1;
       const to = shade.rot + (index + 1) * third - 0.1;
       ctx.beginPath();
-      ctx.arc(x, y, r + 3, from, to);
+      ctx.arc(x, y, reach + 3, from, to);
       if (segment.hp > 0) {
         ctx.strokeStyle = INK;
         ctx.lineWidth = 11;
@@ -284,7 +285,7 @@ function drawShade(ctx, shade, time) {
         ctx.lineWidth = 7;
         ctx.stroke();
         const mid = (from + to) / 2;
-        drawLightGlyph(ctx, segment.colour, x + Math.cos(mid) * (r + 13), y + Math.sin(mid) * (r + 13), 5);
+        drawLightGlyph(ctx, segment.colour, x + Math.cos(mid) * (reach + 13), y + Math.sin(mid) * (reach + 13), 5);
       } else {
         ctx.strokeStyle = 'rgba(40,20,20,0.3)';
         ctx.lineWidth = 2;
@@ -294,14 +295,14 @@ function drawShade(ctx, shade, time) {
   }
   if (shade.kind === 'prismling') {
     ctx.beginPath();
-    ctx.arc(x, y, r + 8, -Math.PI / 2, -Math.PI / 2 + (1 - (shade.age % PRISMLING_PERIOD) / PRISMLING_PERIOD) * TAU);
+    ctx.arc(x, y, reach + 8, -Math.PI / 2, -Math.PI / 2 + (1 - (shade.age % PRISMLING_PERIOD) / PRISMLING_PERIOD) * TAU);
     ctx.strokeStyle = LIGHTS[(shade.colour + 1) % 3].hex;
     ctx.lineWidth = 3;
     ctx.stroke();
   }
   if (shade.hp < shade.maxHp && shade.r >= 14) {
     ctx.beginPath();
-    ctx.arc(x, y, r + (shade.shell ? 18 : 10), -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0, shade.hp / shade.maxHp));
+    ctx.arc(x, y, reach + (shade.shell ? 18 : 10), -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0, shade.hp / shade.maxHp));
     ctx.strokeStyle = INK;
     ctx.lineWidth = 3;
     ctx.stroke();
@@ -368,23 +369,32 @@ function drawEclipseLabel(ctx, boss) {
   ctx.fillText('THE ECLIPSE', boss.x, y + 1);
 }
 
-/** The Shadow Ring telegraph: ink creeps across the marble round THE ECLIPSE, its edge tightening until the ring is released. */
+/** The Shadow Ring telegraph: a ring of ink on the marble, tendrils reaching inward, its dashed edge tightening onto THE ECLIPSE. */
 function drawShadowInk(ctx, boss, time) {
   const k = 1 - boss.charging / CHARGE_TIME;
+  const outer = boss.r * (3.4 - 1.3 * k);
+  const inner = outer - boss.r * 0.3;
   ctx.save();
   ctx.beginPath();
-  for (let i = 0; i < 40; i += 1) {
-    const angle = (i / 40) * TAU;
-    const reach = boss.r * (1.5 + 1.1 * k) * (1 + 0.16 * Math.sin(i * 2.7 + time * 3) + 0.08 * Math.sin(i * 5.3));
-    ctx.lineTo(boss.x + Math.cos(angle) * reach, boss.y + Math.sin(angle) * reach);
-  }
-  ctx.closePath();
-  ctx.fillStyle = `rgba(30,10,36,${(0.3 + 0.3 * k).toFixed(2)})`;
+  ctx.arc(boss.x, boss.y, outer, 0, TAU);
+  ctx.arc(boss.x, boss.y, inner, 0, TAU, true);
+  ctx.fillStyle = `rgba(34,14,40,${(0.55 + 0.3 * k).toFixed(2)})`;
   ctx.fill();
-  ctx.strokeStyle = `rgba(150,90,220,${(0.5 + 0.4 * k).toFixed(2)})`;
-  ctx.lineWidth = 3;
-  ctx.setLineDash([12, 9]);
-  ctx.lineDashOffset = time * 40;
+  ctx.beginPath();
+  for (let i = 0; i < 14; i += 1) {
+    const a = (i / 14) * TAU + time * 0.4;
+    const reach = inner - boss.r * (0.25 + 0.2 * (0.5 + 0.5 * Math.sin(time * 3 + i * 1.9)));
+    ctx.moveTo(boss.x + Math.cos(a - 0.09) * inner, boss.y + Math.sin(a - 0.09) * inner);
+    ctx.lineTo(boss.x + Math.cos(a) * reach, boss.y + Math.sin(a) * reach);
+    ctx.lineTo(boss.x + Math.cos(a + 0.09) * inner, boss.y + Math.sin(a + 0.09) * inner);
+  }
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(boss.x, boss.y, outer + 4, 0, TAU);
+  ctx.strokeStyle = `rgba(150,90,220,${(0.6 + 0.4 * k).toFixed(2)})`;
+  ctx.lineWidth = 4;
+  ctx.setLineDash([16, 10]);
+  ctx.lineDashOffset = -time * 50;
   ctx.stroke();
   ctx.restore();
 }
