@@ -15,6 +15,8 @@ let nextFloater = 0;
 const rings = Array.from({ length: MAX_RINGS }, () => ({ live: false, x: 0, y: 0, life: 0, max: 0.4, radius: 40, rgb: '255,255,255' }));
 let nextArc = 0;
 let nextRing = 0;
+const scorches = Array.from({ length: 48 }, () => ({ live: false, x: 0, y: 0, r: 8, life: 0, rgb: '0,0,0' }));
+let nextScorch = 0;
 
 export function spawnParticle(x, y, vx, vy, life, size, rgb, drag = 0.92) {
   const p = particles[nextParticle];
@@ -101,7 +103,34 @@ export function floatText(x, y, text, colour, size = 18, life = 0.9) {
   f.max = life;
 }
 
+/** A scorch or ash mark on the floor where light struck or a Shade burst; it fades over several seconds. */
+export function scorch(x, y, r, rgb) {
+  const mark = scorches[nextScorch];
+  nextScorch = (nextScorch + 1) % scorches.length;
+  Object.assign(mark, { live: true, x, y, r, rgb, life: 6 });
+}
+
+/** Scorch and ash marks, drawn on the floor under everything else. */
+export function drawScorches(ctx) {
+  for (const mark of scorches) {
+    if (!mark.live) continue;
+    const k = Math.min(1, mark.life / 3);
+    ctx.beginPath();
+    ctx.arc(mark.x, mark.y, mark.r, 0, TAU);
+    ctx.fillStyle = `rgba(60,28,18,${(0.32 * k).toFixed(2)})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${mark.rgb},${(0.45 * k).toFixed(2)})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
 export function updateEffects(dt) {
+  for (const mark of scorches) {
+    if (!mark.live) continue;
+    mark.life -= dt;
+    if (mark.life <= 0) mark.live = false;
+  }
   for (const p of particles) {
     if (!p.live) continue;
     p.life -= dt;
@@ -145,6 +174,7 @@ export function clearEffects() {
   for (const f of floaters) f.live = false;
   for (const arc of arcs) arc.live = false;
   for (const ring of rings) ring.live = false;
+  for (const mark of scorches) mark.live = false;
 }
 
 export function liveParticleCount() {

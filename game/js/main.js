@@ -3,7 +3,7 @@ import { ARENA_H, ARENA_W, LIGHTS, PALETTE, STEP } from './config.js';
 import { createInput, movementAxes, takeClicks, takePresses, takeWheel } from './input.js';
 import { isMuted, playSound, setBeamHum, setMusicMood, setMuted, unlockAudio } from './audio.js';
 import { drawWorld } from './render.js';
-import { paintObservatoryFloor } from './floor.js';
+import { loadArt } from './sprites.js';
 import { drawHud } from './hud.js';
 import { bossIsNext, cardAt, createTitleScene, drawPause, drawResults, drawTitle, drawUpgradeChoice, updateTitleScene } from './screens.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
@@ -45,7 +45,6 @@ function fitCanvas() {
   view.scale = Math.min(width / ARENA_W, height / ARENA_H);
   view.offsetX = (width - ARENA_W * view.scale) / 2;
   view.offsetY = (height - ARENA_H * view.scale) / 2;
-  paintObservatoryFloor(ratio * view.scale);
 }
 
 function toArena(clientX, clientY) {
@@ -297,14 +296,17 @@ fitCanvas();
 window.__prismWarden = { get mode() { return game.mode; }, get world() { return game.world; }, get best() { return game.best; } };
 
 const params = new URLSearchParams(window.location.search);
+const artReady = loadArt();
 if (params.has('shot')) {
   game.frozen = true;
-  runShotScene(game, params.get('shot'), Number(params.get('seed') ?? 7), { setMode, drawFrame, startRun });
-  if (params.has('live')) {
-    game.frozen = false;
-    last = performance.now();
-    requestAnimationFrame(frame);
-  }
+  artReady.then(() => {
+    runShotScene(game, params.get('shot'), Number(params.get('seed') ?? 7), { setMode, drawFrame, startRun });
+    if (params.has('live')) {
+      game.frozen = false;
+      last = performance.now();
+      requestAnimationFrame(frame);
+    }
+  });
 } else {
   announce(`Prism Warden. ${LIGHTS.map((light) => light.name).join(', ')}. Click to begin.`);
   requestAnimationFrame(frame);

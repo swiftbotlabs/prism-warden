@@ -24,17 +24,18 @@ export const LIGHTS = [
   { name: 'White', key: '', hex: '#f6f2ff', rgb: '246,242,255', shape: 'diamond' },
 ];
 
+/** The warm style: cream paper panels with brass edges and dark ink text; `inkPanel` for dark plates with light text. */
 export const PALETTE = {
-  ink: '#ece9ff',
-  dim: '#9a94c8',
-  faint: '#5d5890',
-  gold: '#ffd46e',
-  danger: '#ff5468',
-  panel: 'rgba(12,10,32,0.78)',
-  panelEdge: 'rgba(160,150,255,0.28)',
-  shadeBody: '#07061a',
-  mirror: '200,225,255',
-  core: '210,240,255',
+  ink: '#2a1a12',
+  dim: '#7a5a3a',
+  faint: '#a88a66',
+  gold: '#a8641a',
+  danger: '#b3261e',
+  win: '#1f7a46',
+  panel: 'rgba(247,236,210,0.95)',
+  panelEdge: '#9a6a24',
+  inkPanel: 'rgba(42,26,18,0.88)',
+  cream: '#fff4dc',
 };
 
 export const FONT = '"Segoe UI", "Helvetica Neue", "Liberation Sans", "DejaVu Sans", Arial, sans-serif';

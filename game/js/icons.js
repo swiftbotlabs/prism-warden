@@ -36,61 +36,6 @@ export function drawLightGlyph(ctx, colour, x, y, r, alpha = 1) {
   ctx.restore();
 }
 
-/** A small picture of a Shade kind in a colour, for the INCOMING panel: its shell shape plus the kind's mark. */
-export function drawShadeIcon(ctx, kind, colour, x, y, r) {
-  ctx.save();
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = 'round';
-  if (kind === 'bulwark' || kind === 'eclipse') {
-    for (let i = 0; i < 3; i += 1) {
-      ctx.beginPath();
-      ctx.arc(x, y, r, (i / 3) * TAU + 0.15, ((i + 1) / 3) * TAU - 0.15);
-      ctx.strokeStyle = kind === 'eclipse' ? LIGHTS[colour].hex : LIGHTS[i].hex;
-      ctx.lineWidth = 3.5;
-      ctx.stroke();
-    }
-    ctx.beginPath();
-    if (kind === 'eclipse') ctx.arc(x, y, r * 0.6, 0, TAU);
-    else traceShape(ctx, 'diamond', x, y, r * 0.38);
-    ctx.fillStyle = kind === 'eclipse' ? '#05040f' : '#ffffff';
-    ctx.fill();
-    ctx.restore();
-    return;
-  }
-  const light = LIGHTS[colour];
-  const size = kind === 'shard' ? r * 0.7 : kind === 'darter' ? r * 0.8 : r;
-  if (kind === 'darter') {
-    ctx.beginPath();
-    ctx.moveTo(x - size, y - 3);
-    ctx.lineTo(x - size * 2.3, y - 1);
-    ctx.moveTo(x - size, y + 3);
-    ctx.lineTo(x - size * 2.3, y + 1);
-    ctx.strokeStyle = `rgba(${light.rgb},0.7)`;
-    ctx.stroke();
-  }
-  ctx.beginPath();
-  traceShape(ctx, light.shape, x, y, size);
-  ctx.fillStyle = '#07061a';
-  ctx.fill();
-  ctx.strokeStyle = light.hex;
-  ctx.stroke();
-  if (kind === 'splitter') {
-    ctx.beginPath();
-    ctx.moveTo(x - size * 0.4, y - size * 0.6);
-    ctx.lineTo(x + size * 0.1, y);
-    ctx.lineTo(x - size * 0.2, y + size * 0.6);
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-  if (kind === 'prismling') {
-    ctx.beginPath();
-    ctx.arc(x, y, size + 4, -Math.PI / 2, Math.PI);
-    ctx.strokeStyle = LIGHTS[(colour + 1) % 3].hex;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-  ctx.restore();
-}
 
 /** Line art for an upgrade card, centred on (x, y) inside a box of `size`. */
 export function drawUpgradeIcon(ctx, id, x, y, size) {

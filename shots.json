@@ -2,21 +2,21 @@
   {
     "name": "1-play.jpg",
     "query": "?shot=play&seed=109390&step=17793&reaction=0.3&focus=1",
-    "shows": "THE ECLIPSE mid-fight on wave 10, in the ruined crystal observatory. The boss is large and bright in its last phase (TOTALITY, shifting colour, now Verdant), its name on a plate above the corona, and its Shadow Ring is tightening (the threat). The Warden casts Verdant into it while the Prism branches in Ember and Azure bounce off walls and mirrors into minions of the other colours. Boss, Warden and Core form a triangle with open floor between them. HUD: 'WIN: break THE ECLIPSE after wave 10 \u00b7 LOSE: the Core shatters', CORE 9/12 with '0 = RUN LOST', the boss phase bar, INCOMING, the event log ('Shadow Ring!'), 'MATCH COLOUR' and the named build. Chosen by tools/find-cover.mjs from 1,200 autopilot runs; ?shot=play replays that exact step."
+    "shows": "THE ECLIPSE mid-fight on wave 10 in the Lantern Observatory at golden hour. The boss is a big moon-faced creature screaming in its last phase (TOTALITY) under a Verdant corona crown, with its Shadow Ring creeping as ink across the honey marble. The robed Warden casts Verdant from his crystal lantern staff into it, while the Ember and Azure Prism branches bounce off brass standing mirrors and the walls into hooded shadow-imps of other colours. Boss, Warden and the brass orrery Core form a triangle with open floor between them. Cream-and-brass HUD: CORE with '0 = RUN LOST', 'WIN: break THE ECLIPSE after wave 10 \u00b7 LOSE: the Core shatters', the boss phase bar, INCOMING with creature portraits, the event log, 'MATCH COLOUR', the build as icon cards and key caps. Chosen by tools/find-cover.mjs from 1,200 autopilot runs."
   },
   {
     "name": "2-title.jpg",
     "query": "?shot=title&seed=7",
-    "shows": "The title screen over the observatory floor: logo, tagline, 'OBJECTIVE  WIN: break THE ECLIPSE after wave 10 \u00b7 LOSE: the Core shatters', '10 waves \u00b7 7 kinds of Shade \u00b7 9 upgrades \u00b7 a three-phase boss', a live reflected beam show, controls, RULES OF LIGHT opening with 'Match the beam to the Shade's colour', BEST SCORE 28,410 and 'Click to begin'."
+    "shows": "The title over the Lantern Observatory: the PRISM WARDEN logo, 'Bend light. Hold the core.', the OBJECTIVE (WIN/LOSE) and depth lines, the Warden at the orrery Core with creatures around him and mirrors bending beams, cream panels for controls and the rules of light, BEST SCORE 28,410 and a brass 'CLICK TO BEGIN'."
   },
   {
     "name": "3-upgrade.jpg",
     "query": "?shot=upgrade&seed=7",
-    "shows": "The moment before the boss: WAVE 9 CLEARED with a large 'NEXT: THE ECLIPSE' preview drawn by the boss's own renderer and its three phases (UMBRA, PENUMBRA, TOTALITY) named one per line, above three upgrade cards with icon, level, effect and how each combines with the build, plus Core, score and YOUR BUILD."
+    "shows": "WAVE 9 CLEARED: an ink plate previews 'NEXT: THE ECLIPSE' (its calm moon face under an Ember crown) with its three phases, above three cream upgrade cards (icon, level, effect, how each combines with the build), the run's status and YOUR BUILD as icon cards."
   },
   {
     "name": "4-results.jpg",
     "query": "?shot=results&seed=7",
-    "shows": "VICTORY with THE ECLIPSE drawn small beneath it, dimmed and cracked, then the stats (waves, Shades dispelled, colour accuracy, best combo, time), score 32,925 marked NEW BEST over the previous 28,410, the build taken by name and level, and 'Press R or click to play again'. Below it: 'Lose the Core and the run ends: CORE SHATTERED \u00b7 press R to try again' (the real defeat screen is ?shot=defeat)."
+    "shows": "VICTORY over the observatory with THE ECLIPSE's grey, cracked moon face beneath the title, a cream stats panel (waves, Shades dispelled, colour accuracy, best combo, time), score 40,035 marked NEW BEST over 28,410, the build taken, a brass 'Press R or click to play again', and the lose path named underneath."
   }
 ]

@@ -1,11 +1,13 @@
-// Draws the arena scene: the observatory floor, mirror shards, the Core crystal, Shades and the boss, motes, additive beams, the Warden and the reticle.
-import { ARENA_H, ARENA_W, CORE_RADIUS, CORE_X, CORE_Y, FONT, LIGHTS, PALETTE, TAU, WHITE } from './config.js';
-import { drawLightGlyph, traceShape } from './icons.js';
-import { drawFloaters, drawParticles } from './particles.js';
+// Draws the arena scene: the observatory floor, brass mirrors, the orrery Core, creature Shades and THE ECLIPSE, beams, the Warden.
+import { ARENA_H, ARENA_W, CORE_RADIUS, CORE_X, CORE_Y, FONT, LIGHTS, TAU } from './config.js';
+import { drawLightGlyph } from './icons.js';
+import { drawFloaters, drawParticles, drawScorches } from './particles.js';
 import { PRISMLING_PERIOD } from './shades.js';
-import { drawFloor } from './floor.js';
+import { drawCreature, drawFloor, drawSprite } from './sprites.js';
 import { CHARGE_TIME } from './boss.js';
 
+const INK = '#22141f';
+const BRASS = '#c9973a';
 const glowSprites = new Map();
 
 /** A soft round light sprite in colour `rgb`, cached per colour. */
@@ -34,6 +36,15 @@ export function drawGlow(ctx, x, y, radius, rgb, alpha = 1) {
   ctx.globalAlpha = previous;
 }
 
+function line(ctx, x1, y1, x2, y2, colour, width) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = width;
+  ctx.stroke();
+}
+
 /** The whole play scene for one frame. `time` animates idle motion; `showReticle` draws the aim cursor. */
 export function drawWorld(ctx, world, time, showReticle = true) {
   ctx.save();
@@ -42,6 +53,7 @@ export function drawWorld(ctx, world, time, showReticle = true) {
     ctx.translate(Math.sin(time * 91) * s, Math.cos(time * 77) * s);
   }
   drawFloor(ctx);
+  drawScorches(ctx);
   for (const mirror of world.mirrors) drawMirror(ctx, mirror, time);
   if (world.state === 'won') drawVictoryRays(ctx, time, Math.min(1, world.stateTime / 1.5));
   drawCore(ctx, world.core, time, world.state === 'lost' ? world.stateTime : 0, world.wave ?? 10);
@@ -60,8 +72,8 @@ export function drawWorld(ctx, world, time, showReticle = true) {
   if (showReticle && (world.state === 'fight' || world.state === 'cleared')) drawReticle(ctx, world.warden, time);
   if (world.core.flash > 0) {
     const edge = ctx.createRadialGradient(ARENA_W / 2, ARENA_H / 2, 320, ARENA_W / 2, ARENA_H / 2, 780);
-    edge.addColorStop(0, 'rgba(255,40,70,0)');
-    edge.addColorStop(1, `rgba(255,40,70,${(world.core.flash * 0.7).toFixed(2)})`);
+    edge.addColorStop(0, 'rgba(200,30,40,0)');
+    edge.addColorStop(1, `rgba(200,30,40,${(world.core.flash * 0.6).toFixed(2)})`);
     ctx.fillStyle = edge;
     ctx.fillRect(0, 0, ARENA_W, ARENA_H);
   }
@@ -75,7 +87,7 @@ function drawVictoryRays(ctx, time, strength) {
     const angle = time * 0.15 + (i / 18) * TAU;
     const rgb = LIGHTS[i % 3].rgb;
     const ray = ctx.createLinearGradient(CORE_X, CORE_Y, CORE_X + Math.cos(angle) * 900, CORE_Y + Math.sin(angle) * 900);
-    ray.addColorStop(0, `rgba(${rgb},${(0.5 * strength).toFixed(2)})`);
+    ray.addColorStop(0, `rgba(${rgb},${(0.4 * strength).toFixed(2)})`);
     ray.addColorStop(1, `rgba(${rgb},0)`);
     ctx.beginPath();
     ctx.moveTo(CORE_X, CORE_Y);
@@ -84,47 +96,34 @@ function drawVictoryRays(ctx, time, strength) {
     ctx.fillStyle = ray;
     ctx.fill();
   }
-  drawGlow(ctx, CORE_X, CORE_Y, 260, '255,240,200', 0.6 * strength);
   ctx.restore();
 }
 
+/** A brass-framed standing mirror seen from above: its shadow, the frame, the glass edge, a glint, feet at both ends. */
 function drawMirror(ctx, mirror, time) {
-  const grow = mirror.born;
-  const ux = Math.cos(mirror.angle) * mirror.length * 0.5 * grow;
-  const uy = Math.sin(mirror.angle) * mirror.length * 0.5 * grow;
+  const ux = Math.cos(mirror.angle) * mirror.length * 0.5 * mirror.born;
+  const uy = Math.sin(mirror.angle) * mirror.length * 0.5 * mirror.born;
+  const [x1, y1, x2, y2] = [mirror.cx - ux, mirror.cy - uy, mirror.cx + ux, mirror.cy + uy];
   ctx.save();
   ctx.lineCap = 'round';
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.beginPath();
-  ctx.moveTo(mirror.cx - ux, mirror.cy - uy);
-  ctx.lineTo(mirror.cx + ux, mirror.cy + uy);
-  ctx.strokeStyle = `rgba(${PALETTE.mirror},${0.12 + mirror.glow * 0.25})`;
-  ctx.lineWidth = 18;
-  ctx.stroke();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.strokeStyle = 'rgba(30,40,80,0.95)';
-  ctx.lineWidth = 9;
-  ctx.stroke();
-  ctx.strokeStyle = `rgba(${PALETTE.mirror},0.95)`;
-  ctx.lineWidth = 4;
-  ctx.stroke();
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-  ctx.globalCompositeOperation = 'lighter';
-  const glint = ((time * 0.35 + mirror.cx * 0.001) % 1) * 2 - 1;
-  drawGlow(ctx, mirror.cx + ux * glint, mirror.cy + uy * glint, 14, '255,255,255', 0.7);
-  if (mirror.glow > 0) drawGlow(ctx, mirror.cx, mirror.cy, 40, PALETTE.mirror, mirror.glow * 0.4);
-  ctx.globalCompositeOperation = 'source-over';
-  for (const end of [-1, 1]) {
+  line(ctx, x1 + 7, y1 + 9, x2 + 7, y2 + 9, 'rgba(70,35,10,0.3)', 16);
+  line(ctx, x1, y1, x2, y2, '#6b4214', 15);
+  line(ctx, x1, y1, x2, y2, BRASS, 11);
+  line(ctx, x1, y1, x2, y2, '#d8f0ff', 5);
+  line(ctx, x1, y1, x2, y2, '#ffffff', 1.5);
+  for (const [x, y] of [[x1, y1], [x2, y2]]) {
     ctx.beginPath();
-    ctx.arc(mirror.cx + ux * end, mirror.cy + uy * end, 7, 0, TAU);
-    ctx.fillStyle = '#c79a4a';
+    ctx.arc(x, y, 8, 0, TAU);
+    ctx.fillStyle = BRASS;
     ctx.fill();
-    ctx.strokeStyle = '#3a2a10';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#5a3a10';
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   }
+  ctx.globalCompositeOperation = 'lighter';
+  const glint = ((time * 0.35 + mirror.cx * 0.001) % 1) * 2 - 1;
+  drawGlow(ctx, mirror.cx + ux * glint, mirror.cy + uy * glint, 12, '255,255,255', 0.6);
+  if (mirror.glow > 0) drawGlow(ctx, mirror.cx, mirror.cy, 44, '255,240,200', mirror.glow * 0.5);
   ctx.restore();
 }
 
@@ -132,13 +131,13 @@ function drawMirror(ctx, mirror, time) {
 function drawDaisRunes(ctx, wave, time) {
   for (let i = 0; i < 10; i += 1) {
     const a = -Math.PI / 2 + (i / 10) * TAU;
-    const x = CORE_X + Math.cos(a) * 73;
-    const y = CORE_Y + Math.sin(a) * 73;
+    const x = CORE_X + Math.cos(a) * 75;
+    const y = CORE_Y + Math.sin(a) * 75;
     const lit = i < wave;
     if (lit) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      drawGlow(ctx, x, y, 16, '255,212,110', 0.45 + 0.15 * Math.sin(time * 3 + i));
+      drawGlow(ctx, x, y, 14, '255,200,90', 0.5 + 0.15 * Math.sin(time * 3 + i));
       ctx.restore();
     }
     const bits = (i * 7 + 3) % 8;
@@ -151,30 +150,52 @@ function drawDaisRunes(ctx, wave, time) {
     if (bits & 1) { ctx.moveTo(0, -6); ctx.lineTo(4, -2); }
     if (bits & 2) { ctx.moveTo(0, 0); ctx.lineTo(-4, 3); }
     if (bits & 4) { ctx.moveTo(-3, 6); ctx.lineTo(3, 6); }
-    ctx.strokeStyle = lit ? '#ffe2a0' : 'rgba(12,8,30,0.85)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = lit ? '#fff1c0' : 'rgba(70,40,20,0.8)';
+    ctx.lineWidth = 2.5;
     ctx.stroke();
     ctx.restore();
   }
 }
 
-/** The Core: a faceted crystal whose glow, cracks, shield ring and tint show its health. */
+/** The Core: a crystal held in a brass orrery whose rings turn round it; its glow, cracks and shield show its health. */
 function drawCore(ctx, core, time, shatter, wave) {
   drawDaisRunes(ctx, wave, time);
   const ratio = core.hp / core.maxHp;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  const pulse = 0.85 + 0.15 * Math.sin(time * 2.2);
-  drawGlow(ctx, CORE_X, CORE_Y, 150 * pulse, PALETTE.core, 0.35 + 0.35 * ratio);
-  if (ratio < 0.34 && shatter === 0) drawGlow(ctx, CORE_X, CORE_Y, 120, '255,60,90', 0.35 + 0.3 * Math.sin(time * 8));
-  if (core.healFlash > 0) drawGlow(ctx, CORE_X, CORE_Y, 110, '120,255,190', core.healFlash * 1.5);
+  drawGlow(ctx, CORE_X, CORE_Y, 110 * (0.9 + 0.1 * Math.sin(time * 2.2)), '255,235,190', 0.25 + 0.3 * ratio);
+  if (ratio < 0.34 && shatter === 0) drawGlow(ctx, CORE_X, CORE_Y, 110, '255,60,60', 0.35 + 0.25 * Math.sin(time * 8));
+  if (core.healFlash > 0) drawGlow(ctx, CORE_X, CORE_Y, 100, '120,255,170', core.healFlash * 1.5);
   ctx.restore();
   if (shatter > 0) return;
-
+  for (let i = 0; i < 2; i += 1) {
+    ctx.save();
+    ctx.translate(CORE_X, CORE_Y);
+    ctx.rotate(time * (i ? -0.35 : 0.25) + i);
+    const rx = 52 + i * 9;
+    const ry = 18 + i * 7;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, rx, ry, 0, 0, TAU);
+    ctx.strokeStyle = '#6b4214';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    ctx.strokeStyle = BRASS;
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+    const a = time * (1.1 + i * 0.4);
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * rx, Math.sin(a) * ry, 6, 0, TAU);
+    ctx.fillStyle = i ? '#7fb6ff' : '#ff9d5c';
+    ctx.fill();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
   const points = [];
   for (let i = 0; i < 6; i += 1) {
     const angle = -Math.PI / 2 + (i / 6) * TAU;
-    points.push(CORE_X + Math.cos(angle) * CORE_RADIUS * 0.92, CORE_Y + Math.sin(angle) * CORE_RADIUS * 1.18);
+    points.push(CORE_X + Math.cos(angle) * CORE_RADIUS * 0.85, CORE_Y + Math.sin(angle) * CORE_RADIUS * 1.12);
   }
   for (let i = 0; i < 6; i += 1) {
     const j = (i + 1) % 6;
@@ -184,40 +205,37 @@ function drawCore(ctx, core, time, shatter, wave) {
     ctx.lineTo(points[i * 2], points[i * 2 + 1]);
     ctx.lineTo(points[j * 2], points[j * 2 + 1]);
     ctx.closePath();
-    const light = Math.round(150 + 90 * shine * (0.4 + 0.6 * ratio));
-    ctx.fillStyle = `rgb(${light - 40},${light},255)`;
+    const light = Math.round(160 + 90 * shine * (0.4 + 0.6 * ratio));
+    ctx.fillStyle = `rgb(${light - 30},${light},255)`;
     ctx.fill();
   }
   ctx.beginPath();
   for (let i = 0; i < 6; i += 1) ctx[i === 0 ? 'moveTo' : 'lineTo'](points[i * 2], points[i * 2 + 1]);
   ctx.closePath();
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
   ctx.stroke();
-
-  const cracks = Math.round((1 - ratio) * 9);
-  ctx.strokeStyle = 'rgba(20,10,40,0.85)';
+  ctx.strokeStyle = 'rgba(40,10,20,0.9)';
   ctx.lineWidth = 2;
-  for (let i = 0; i < cracks; i += 1) {
+  for (let i = 0; i < Math.round((1 - ratio) * 9); i += 1) {
     const angle = i * 2.39996;
     ctx.beginPath();
     ctx.moveTo(CORE_X + Math.cos(angle) * 4, CORE_Y + Math.sin(angle) * 4);
-    ctx.lineTo(CORE_X + Math.cos(angle + 0.3) * 16, CORE_Y + Math.sin(angle + 0.3) * 18);
-    ctx.lineTo(CORE_X + Math.cos(angle - 0.1) * 30, CORE_Y + Math.sin(angle - 0.1) * 34);
+    ctx.lineTo(CORE_X + Math.cos(angle + 0.3) * 14, CORE_Y + Math.sin(angle + 0.3) * 16);
+    ctx.lineTo(CORE_X + Math.cos(angle - 0.1) * 28, CORE_Y + Math.sin(angle - 0.1) * 32);
     ctx.stroke();
   }
   if (core.flash > 0) {
     ctx.beginPath();
     for (let i = 0; i < 6; i += 1) ctx[i === 0 ? 'moveTo' : 'lineTo'](points[i * 2], points[i * 2 + 1]);
-    ctx.fillStyle = `rgba(255,60,90,${Math.min(0.8, core.flash * 2)})`;
+    ctx.fillStyle = `rgba(255,60,60,${Math.min(0.8, core.flash * 2)})`;
     ctx.fill();
   }
   if (core.shield > 0) {
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
     ctx.beginPath();
-    ctx.arc(CORE_X, CORE_Y, 56, 0, TAU);
-    ctx.strokeStyle = `rgba(120,220,255,${0.35 + 0.15 * Math.sin(time * 3)})`;
+    ctx.arc(CORE_X, CORE_Y, 68, 0, TAU);
+    ctx.strokeStyle = `rgba(60,150,230,${0.6 + 0.2 * Math.sin(time * 3)})`;
     ctx.lineWidth = 3;
     ctx.setLineDash([10, 8]);
     ctx.lineDashOffset = -time * 20;
@@ -230,366 +248,232 @@ function drawMotes(ctx, motes) {
   if (motes.length === 0) return;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  for (const mote of motes) {
-    drawGlow(ctx, mote.x, mote.y, 16, '120,255,190', 0.9);
-    ctx.fillStyle = '#eafff4';
-    ctx.fillRect(mote.x - 2, mote.y - 2, 4, 4);
-  }
+  for (const mote of motes) drawGlow(ctx, mote.x, mote.y, 16, '120,255,170', 0.9);
   ctx.restore();
 }
 
-/** One Shade: glow in its colour, a dark body inside a shell of its colour's shape, a slit eye watching the Core. */
+/** One Shade: its creature sprite (squashing as it spawns, flinching when hit, facing the Core), plus its live rules overlays. */
 function drawShade(ctx, shade, time) {
-  if (shade.kind === 'umbra') {
-    drawUmbra(ctx, shade);
-    return;
-  }
-  const light = LIGHTS[shade.colour];
-  const fade = Math.min(1, shade.age * 2.5);
   const { x, y, r } = shade;
+  const born = Math.min(1, shade.age * 3);
+  const squash = born < 1 ? 0.3 * (1 - born) * Math.cos(born * 9) : 0;
   ctx.save();
-  ctx.globalAlpha = fade;
-  ctx.globalCompositeOperation = 'lighter';
-  drawGlow(ctx, x, y, r * 3, shade.kind === 'bulwark' ? '200,190,255' : light.rgb, shade.colour === WHITE ? 0.6 : 0.5);
-  ctx.globalCompositeOperation = 'source-over';
-
-  const towardCore = Math.atan2(CORE_Y - y, CORE_X - x);
-  if (shade.kind === 'darter') {
-    ctx.strokeStyle = `rgba(${light.rgb},0.45)`;
-    ctx.lineWidth = 2;
-    for (const side of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(x - Math.cos(towardCore) * r + Math.sin(towardCore) * side * 5, y - Math.sin(towardCore) * r - Math.cos(towardCore) * side * 5);
-      ctx.lineTo(x - Math.cos(towardCore) * r * 3.2, y - Math.sin(towardCore) * r * 3.2);
-      ctx.stroke();
-    }
-  }
-
-  if (shade.shell) {
-    drawBulwark(ctx, shade, time);
-  } else {
-    const spin = shade.kind === 'drifter' || shade.kind === 'splitter' ? shade.age * 0.6 : 0;
-    ctx.beginPath();
-    traceShape(ctx, light.shape, x, y, r, spin);
-    ctx.fillStyle = PALETTE.shadeBody;
-    ctx.fill();
-    ctx.lineWidth = shade.kind === 'shard' ? 2.5 : 3.5;
-    ctx.strokeStyle = light.hex;
-    ctx.stroke();
-    if (shade.kind === 'splitter') {
-      ctx.beginPath();
-      ctx.moveTo(x - r * 0.5, y - r * 0.6);
-      ctx.lineTo(x + r * 0.1, y);
-      ctx.lineTo(x - r * 0.2, y + r * 0.6);
-      ctx.strokeStyle = `rgba(${light.rgb},0.7)`;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-    if (shade.kind === 'prismling') {
-      const until = 1 - (shade.age % PRISMLING_PERIOD) / PRISMLING_PERIOD;
-      const next = LIGHTS[(shade.colour + 1) % 3];
-      ctx.beginPath();
-      ctx.arc(x, y, r + 6, -Math.PI / 2, -Math.PI / 2 + until * TAU);
-      ctx.strokeStyle = next.hex;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      for (let i = 0; i < 3; i += 1) {
-        const angle = time * 3 + (i / 3) * TAU;
-        drawLightGlyph(ctx, i, x + Math.cos(angle) * (r + 11), y + Math.sin(angle) * (r + 11), 3.2);
-      }
-    }
-  }
-
-  if (!shade.shell) {
-    const ex = x + Math.cos(towardCore) * r * 0.25;
-    const ey = y + Math.sin(towardCore) * r * 0.25;
-    ctx.save();
-    ctx.translate(ex, ey);
-    ctx.rotate(towardCore + Math.PI / 2);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.38, r * 0.14, 0, 0, TAU);
-    ctx.fillStyle = shade.colour === WHITE ? '#ffffff' : light.hex;
-    ctx.fill();
-    ctx.restore();
-  }
-
+  ctx.globalAlpha = Math.min(1, shade.age * 4);
+  ctx.translate(x + (shade.flash > 0 ? Math.sin(time * 90) * 3 : 0), y);
+  ctx.scale(1 + squash, 1 - squash);
+  const size = r * (shade.kind === 'bulwark' ? 2.8 : shade.kind === 'umbra' ? 3.6 : 4.2);
+  drawCreature(ctx, shade.kind, shade.colour, 0, 0, size, CORE_X < x);
   if (shade.flash > 0) {
     ctx.globalCompositeOperation = 'lighter';
-    drawGlow(ctx, x, y, r * 1.6, '255,255,255', shade.flash * 8);
+    drawGlow(ctx, 0, 0, r * 1.5, '255,255,255', shade.flash * 7);
+  }
+  ctx.restore();
+  ctx.save();
+  if (shade.shell) {
+    const third = TAU / 3;
+    shade.shell.forEach((segment, index) => {
+      const from = shade.rot + index * third + 0.1;
+      const to = shade.rot + (index + 1) * third - 0.1;
+      ctx.beginPath();
+      ctx.arc(x, y, r + 3, from, to);
+      if (segment.hp > 0) {
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 11;
+        ctx.stroke();
+        ctx.strokeStyle = LIGHTS[segment.colour].hex;
+        ctx.lineWidth = 7;
+        ctx.stroke();
+        const mid = (from + to) / 2;
+        drawLightGlyph(ctx, segment.colour, x + Math.cos(mid) * (r + 13), y + Math.sin(mid) * (r + 13), 5);
+      } else {
+        ctx.strokeStyle = 'rgba(40,20,20,0.3)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    });
+  }
+  if (shade.kind === 'prismling') {
+    ctx.beginPath();
+    ctx.arc(x, y, r + 8, -Math.PI / 2, -Math.PI / 2 + (1 - (shade.age % PRISMLING_PERIOD) / PRISMLING_PERIOD) * TAU);
+    ctx.strokeStyle = LIGHTS[(shade.colour + 1) % 3].hex;
+    ctx.lineWidth = 3;
+    ctx.stroke();
   }
   if (shade.hp < shade.maxHp && shade.r >= 14) {
-    ctx.globalCompositeOperation = 'source-over';
     ctx.beginPath();
-    ctx.arc(x, y, r + (shade.shell ? 10 : 4), -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0, shade.hp / shade.maxHp));
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-    ctx.lineWidth = 2;
+    ctx.arc(x, y, r + (shade.shell ? 18 : 10), -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0, shade.hp / shade.maxHp));
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 3;
     ctx.stroke();
   }
   ctx.restore();
 }
 
-/** A Bulwark: three rotating shell arcs in the three colours around a white heart that any light harms once bared. */
-function drawBulwark(ctx, shade, time) {
-  const { x, y, r } = shade;
-  ctx.beginPath();
-  ctx.arc(x, y, r - 4, 0, TAU);
-  ctx.fillStyle = PALETTE.shadeBody;
-  ctx.fill();
-  const third = TAU / 3;
-  shade.shell.forEach((segment, index) => {
-    const from = shade.rot + index * third + 0.08;
-    const to = shade.rot + (index + 1) * third - 0.08;
-    const light = LIGHTS[segment.colour];
-    ctx.beginPath();
-    ctx.arc(x, y, r, from, to);
-    if (segment.hp > 0) {
-      ctx.strokeStyle = light.hex;
-      ctx.lineWidth = 7;
-      ctx.stroke();
-      const mid = (from + to) / 2;
-      drawLightGlyph(ctx, segment.colour, x + Math.cos(mid) * (r + 9), y + Math.sin(mid) * (r + 9), 5);
-    } else {
-      ctx.strokeStyle = `rgba(${light.rgb},0.18)`;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  });
-  const beat = 1 + 0.12 * Math.sin(time * 6);
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  drawGlow(ctx, x, y, 22 * beat, '255,255,255', 0.6);
-  ctx.restore();
-  ctx.beginPath();
-  traceShape(ctx, 'diamond', x, y, 8 * beat);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-}
-
-/** THE ECLIPSE: a black sun with a corona in its phase colour; `fallen` draws it dimmed and cracked for the victory screen. */
+/** THE ECLIPSE: a moon-faced creature under a corona crown in its phase colour; its face changes per phase (`fallen`: grey, cracked). */
 export function drawEclipse(ctx, boss, time, { fallen = false } = {}) {
   const light = LIGHTS[boss.colour];
   const { x, y, r } = boss;
-  const power = fallen ? 0.3 : 1;
-  if (boss.charging > 0) drawShadowCharge(ctx, boss, time);
+  if (boss.charging > 0) drawShadowInk(ctx, boss, time);
   ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  drawGlow(ctx, x, y, r * 3, light.rgb, power);
-  drawGlow(ctx, x, y, r * 1.6, '255,255,255', 0.35 * power);
-  ctx.beginPath();
-  for (let i = 0; i < 16; i += 1) {
-    const angle = boss.rot + (i / 16) * TAU;
-    const length = r * (1.35 + 0.25 * Math.sin(time * 4 + i * 1.7));
-    ctx.moveTo(x + Math.cos(angle) * r * 0.95, y + Math.sin(angle) * r * 0.95);
-    ctx.lineTo(x + Math.cos(angle + 0.06) * length, y + Math.sin(angle + 0.06) * length);
+  if (!fallen) {
+    ctx.globalCompositeOperation = 'lighter';
+    drawGlow(ctx, x, y, r * 2.6, light.rgb, 0.85);
+    ctx.globalCompositeOperation = 'source-over';
   }
-  ctx.strokeStyle = `rgba(${light.rgb},${power})`;
-  ctx.lineWidth = 6;
+  ctx.beginPath();
+  for (let i = 0; i < 28; i += 1) {
+    const angle = boss.rot * 0.5 + (i / 28) * TAU;
+    const reach = i % 2 ? r * 1.02 : r * (1.45 + 0.1 * Math.sin(time * 4 + i));
+    ctx.lineTo(x + Math.cos(angle) * reach, y + Math.sin(angle) * reach);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fallen ? '#8a8174' : light.hex;
+  ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 4;
   ctx.stroke();
   if (boss.broken > 0) {
     ctx.beginPath();
     ctx.arc(x, y, r + (1.2 - boss.broken) * 260, 0, TAU);
-    ctx.strokeStyle = `rgba(255,255,255,${boss.broken * 0.6})`;
-    ctx.lineWidth = 6;
+    ctx.strokeStyle = `rgba(255,255,255,${boss.broken * 0.7})`;
+    ctx.lineWidth = 8;
     ctx.stroke();
   }
   ctx.restore();
-
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, TAU);
-  const body = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 4, x, y, r);
-  body.addColorStop(0, '#1a1638');
-  body.addColorStop(1, '#030210');
-  ctx.fillStyle = body;
-  ctx.fill();
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = light.hex;
-  ctx.stroke();
-  for (let i = 0; i < 3; i += 1) {
-    const angle = -boss.rot * 1.5 + (i / 3) * TAU;
-    drawLightGlyph(ctx, boss.colour, x + Math.cos(angle) * r * 0.62, y + Math.sin(angle) * r * 0.62, r * 0.15);
-  }
-  ctx.beginPath();
-  ctx.ellipse(x, y, r * 0.34, fallen ? r * 0.025 : r * 0.1, 0, 0, TAU);
-  ctx.fillStyle = light.hex;
-  ctx.fill();
-  if (fallen) drawEclipseCracks(ctx, x, y, r);
+  drawCreature(ctx, 'eclipse', 0, x, y, r * 2.3, false, fallen ? 3 : boss.phase);
+  if (!fallen) drawLightGlyph(ctx, boss.colour, x, y - r * 1.25, r * 0.16);
   if (boss.flash > 0) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    drawGlow(ctx, x, y, r * 1.5, '255,255,255', boss.flash * 5);
+    drawGlow(ctx, x, y, r * 1.4, '255,255,255', boss.flash * 4);
     ctx.restore();
   }
 }
 
-/** THE ECLIPSE's name on its own dark plate above the corona, drawn after the beams so nothing crosses it. */
+/** THE ECLIPSE's name on its own ink plate above the crown, drawn after the beams so nothing crosses it. */
 function drawEclipseLabel(ctx, boss) {
   const y = boss.y - boss.r * 1.75;
   ctx.font = `900 17px ${FONT}`;
   const width = ctx.measureText('THE ECLIPSE').width + 24;
   ctx.beginPath();
   ctx.roundRect(boss.x - width / 2, y - 13, width, 26, 13);
-  ctx.fillStyle = 'rgba(8,5,22,0.85)';
+  ctx.fillStyle = 'rgba(34,20,31,0.9)';
   ctx.fill();
   ctx.strokeStyle = LIGHTS[boss.colour].hex;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 2;
   ctx.stroke();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#fff4dc';
   ctx.fillText('THE ECLIPSE', boss.x, y + 1);
 }
 
-/** Broken THE ECLIPSE: a dark veil over the body and jagged cracks with light leaking through them. */
-function drawEclipseCracks(ctx, x, y, r) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, TAU);
-  ctx.fillStyle = 'rgba(4,3,12,0.45)';
-  ctx.fill();
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.lineJoin = 'round';
-  for (let i = 0; i < 7; i += 1) {
-    const angle = i * 0.9 + 0.3;
-    ctx.beginPath();
-    ctx.moveTo(x + Math.cos(angle) * r * 0.12, y + Math.sin(angle) * r * 0.12);
-    ctx.lineTo(x + Math.cos(angle + 0.25) * r * 0.45, y + Math.sin(angle + 0.25) * r * 0.45);
-    ctx.lineTo(x + Math.cos(angle - 0.1) * r * 0.75, y + Math.sin(angle - 0.1) * r * 0.75);
-    ctx.lineTo(x + Math.cos(angle + 0.12) * r * 1.02, y + Math.sin(angle + 0.12) * r * 1.02);
-    ctx.strokeStyle = 'rgba(255,212,110,0.35)';
-    ctx.lineWidth = 7;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,245,215,0.95)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/** A Shadow Ring orb: a dark violet sphere with a pale rim, flying straight out from THE ECLIPSE. */
-function drawUmbra(ctx, orb) {
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  drawGlow(ctx, orb.x, orb.y, orb.r * 3, '150,80,255', 0.55);
-  ctx.restore();
-  ctx.beginPath();
-  ctx.arc(orb.x, orb.y, orb.r, 0, TAU);
-  ctx.fillStyle = '#12051f';
-  ctx.fill();
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = orb.flash > 0 ? '#ffffff' : '#d9b8ff';
-  ctx.stroke();
-}
-
-/** The Shadow Ring telegraph: the ground darkens round THE ECLIPSE and a ring of shadow tightens onto it before release. */
-function drawShadowCharge(ctx, boss, time) {
+/** The Shadow Ring telegraph: ink creeps across the marble round THE ECLIPSE, its edge tightening until the ring is released. */
+function drawShadowInk(ctx, boss, time) {
   const k = 1 - boss.charging / CHARGE_TIME;
   ctx.save();
   ctx.beginPath();
-  ctx.arc(boss.x, boss.y, boss.r * 2.2, 0, TAU);
-  ctx.fillStyle = `rgba(8,0,20,${(0.12 + 0.2 * k).toFixed(2)})`;
+  for (let i = 0; i < 40; i += 1) {
+    const angle = (i / 40) * TAU;
+    const reach = boss.r * (1.5 + 1.1 * k) * (1 + 0.16 * Math.sin(i * 2.7 + time * 3) + 0.08 * Math.sin(i * 5.3));
+    ctx.lineTo(boss.x + Math.cos(angle) * reach, boss.y + Math.sin(angle) * reach);
+  }
+  ctx.closePath();
+  ctx.fillStyle = `rgba(30,10,36,${(0.3 + 0.3 * k).toFixed(2)})`;
   ctx.fill();
-  ctx.beginPath();
-  ctx.arc(boss.x, boss.y, boss.r * (2.6 - 1.2 * k), 0, TAU);
-  ctx.strokeStyle = `rgba(200,150,255,${(0.4 + 0.5 * k).toFixed(2)})`;
-  ctx.lineWidth = 4;
-  ctx.setLineDash([14, 10]);
+  ctx.strokeStyle = `rgba(150,90,220,${(0.5 + 0.4 * k).toFixed(2)})`;
+  ctx.lineWidth = 3;
+  ctx.setLineDash([12, 9]);
   ctx.lineDashOffset = time * 40;
   ctx.stroke();
   ctx.restore();
 }
 
-/** Beams as layered additive strokes: a wide halo, the coloured body and a white-hot centre, flares at bounces, a shaped tip. */
+/** Beams on the warm floor: an ink outline, the saturated colour, a soft glow and a white-hot core, flares at bounces, a shaped tip. */
 function drawBeams(ctx, beams, time) {
   if (beams.length === 0) return;
   ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   const flicker = 1 + 0.08 * Math.sin(time * 47);
   for (const beam of beams) {
     const light = LIGHTS[beam.colour];
-    const width = beam.halfWidth * flicker * (beam.power < 1 ? 0.7 : 1.15);
+    const width = beam.halfWidth * flicker * (beam.power < 1 ? 0.75 : 1.15);
     ctx.beginPath();
     ctx.moveTo(beam.points[0], beam.points[1]);
     for (let i = 2; i < beam.points.length; i += 2) ctx.lineTo(beam.points[i], beam.points[i + 1]);
-    const layers = [[width * 5.5, 0.1], [width * 2.6, 0.28], [width * 1.2, 0.75]];
-    for (const [lineWidth, alpha] of layers) {
-      ctx.strokeStyle = `rgba(${light.rgb},${(alpha * (0.5 + beam.power * 0.5)).toFixed(2)})`;
-      ctx.lineWidth = lineWidth;
-      ctx.stroke();
-    }
-    ctx.strokeStyle = `rgba(255,255,255,${(0.85 * beam.power).toFixed(2)})`;
-    ctx.lineWidth = Math.max(1.2, width * 0.45);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = 'rgba(45,18,10,0.6)';
+    ctx.lineWidth = width * 2.8;
     ctx.stroke();
+    ctx.strokeStyle = light.hex;
+    ctx.lineWidth = width * 1.8;
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = `rgba(${light.rgb},0.35)`;
+    ctx.lineWidth = width * 4.5;
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = '#fffdf2';
+    ctx.lineWidth = Math.max(1.5, width * 0.6);
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < beam.bounces.length; i += 2) {
       drawGlow(ctx, beam.bounces[i], beam.bounces[i + 1], 26, light.rgb, 0.9);
       drawGlow(ctx, beam.bounces[i], beam.bounces[i + 1], 10, '255,255,255', 0.9);
     }
     drawGlow(ctx, beam.endX, beam.endY, beam.blocked ? 34 : 18, light.rgb, 1);
   }
-  const main = beams[0];
-  drawGlow(ctx, main.points[0], main.points[1], 34, LIGHTS[main.colour].rgb, 1);
-  drawGlow(ctx, main.points[0], main.points[1], 12, '255,255,255', 0.9);
   ctx.globalCompositeOperation = 'source-over';
   for (const beam of beams) drawLightGlyph(ctx, beam.colour, beam.endX, beam.endY, 6, 0.95);
   ctx.restore();
 }
 
-/** The Warden: a glowing glass lens ringed in the current colour, a notch toward the aim, the colour's shape at its heart. */
+/** The Warden: a robed keeper facing where it casts, its lantern staff tipped with cut crystal glowing in the chosen colour. */
 function drawWarden(ctx, warden, time) {
   const light = LIGHTS[warden.colour];
-  const { x, y, r } = warden;
+  const { x, y } = warden;
   const aim = Math.atan2(warden.aimY - y, warden.aimX - x);
+  const facing = Math.cos(aim) < 0 ? -1 : 1;
+  const tipX = x + Math.cos(aim) * 40;
+  const tipY = y - 14 + Math.sin(aim) * 40;
   ctx.save();
+  ctx.lineCap = 'round';
   ctx.globalCompositeOperation = 'lighter';
-  drawGlow(ctx, x, y, 46 + Math.sin(time * 5) * 3, light.rgb, 0.7);
+  drawGlow(ctx, tipX, tipY, 40 + Math.sin(time * 5) * 3, light.rgb, 0.8);
+  ctx.globalCompositeOperation = 'source-over';
   if (warden.swapFlash > 0) {
     ctx.beginPath();
-    ctx.arc(x, y, r + (0.25 - warden.swapFlash) * 120, 0, TAU);
-    ctx.strokeStyle = `rgba(${light.rgb},${warden.swapFlash * 3})`;
+    ctx.arc(x, y, 14 + (0.25 - warden.swapFlash) * 120, 0, TAU);
+    ctx.strokeStyle = light.hex;
     ctx.lineWidth = 3;
     ctx.stroke();
   }
+  drawSprite(ctx, 2, 5, x, y - 16, 80, facing < 0);
+  line(ctx, x + facing * 8, y + 2, tipX, tipY, '#4a2a10', 6);
+  line(ctx, x + facing * 8, y + 2, tipX, tipY, BRASS, 3);
+  drawSprite(ctx, 3, 5, tipX, tipY - 4, 40);
+  drawLightGlyph(ctx, warden.colour, tipX, tipY - 6, 4);
   ctx.restore();
-  const glass = ctx.createRadialGradient(x - 4, y - 4, 1, x, y, r);
-  glass.addColorStop(0, '#ffffff');
-  glass.addColorStop(0.5, `rgba(${light.rgb},0.6)`);
-  glass.addColorStop(1, 'rgba(20,16,50,0.95)');
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, TAU);
-  ctx.fillStyle = glass;
-  ctx.fill();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = light.hex;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x + Math.cos(aim) * (r + 9), y + Math.sin(aim) * (r + 9));
-  ctx.lineTo(x + Math.cos(aim + 0.42) * (r + 1), y + Math.sin(aim + 0.42) * (r + 1));
-  ctx.lineTo(x + Math.cos(aim - 0.42) * (r + 1), y + Math.sin(aim - 0.42) * (r + 1));
-  ctx.closePath();
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  drawLightGlyph(ctx, warden.colour, x, y, 4.5);
 }
 
 function drawReticle(ctx, warden, time) {
   const light = LIGHTS[warden.colour];
   const x = warden.aimX;
   const y = warden.aimY;
-  const spin = time * 1.5;
   ctx.save();
-  ctx.strokeStyle = light.hex;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(x, y, 11, 0, TAU);
-  ctx.stroke();
-  ctx.beginPath();
-  for (let i = 0; i < 4; i += 1) {
-    const angle = spin + (i / 4) * TAU;
-    ctx.moveTo(x + Math.cos(angle) * 15, y + Math.sin(angle) * 15);
-    ctx.lineTo(x + Math.cos(angle) * 21, y + Math.sin(angle) * 21);
+  for (const [colour, width] of [[INK, 5], [light.hex, 2.5]]) {
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.arc(x, y, 11, 0, TAU);
+    for (let i = 0; i < 4; i += 1) {
+      const angle = time * 1.5 + (i / 4) * TAU;
+      ctx.moveTo(x + Math.cos(angle) * 15, y + Math.sin(angle) * 15);
+      ctx.lineTo(x + Math.cos(angle) * 21, y + Math.sin(angle) * 21);
+    }
+    ctx.stroke();
   }
-  ctx.stroke();
   drawLightGlyph(ctx, warden.colour, x, y, 3.5);
   ctx.restore();
 }

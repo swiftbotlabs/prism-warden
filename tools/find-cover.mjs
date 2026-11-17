@@ -24,7 +24,7 @@ function hudPanelRects(world) {
     { x: ARENA_W - 316, y: 14, w: 300, h: 80 },
     { x: ARENA_W / 2 - 220, y: ARENA_H - 107, w: 440, h: 30 },
     { x: ARENA_W / 2 - 238, y: ARENA_H - 62, w: 476, h: 46 },
-    { x: ARENA_W - 300, y: ARENA_H - 34, w: 284, h: 24 },
+    { x: ARENA_W - 392, y: ARENA_H - 74, w: 376, h: 66 },
   ];
   if (world.log.some((entry) => world.time - entry.time < 5)) rects.push({ x: 16, y: 112, w: 330, h: 90 });
   if (world.director && world.state === 'fight') {
