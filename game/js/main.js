@@ -5,11 +5,12 @@ import { isMuted, playSound, setBeamHum, setMusicMood, setMuted, unlockAudio } f
 import { drawWorld } from './render.js';
 import { loadArt } from './sprites.js';
 import { drawHud } from './hud.js';
-import { bossIsNext, cardAt, createTitleScene, drawPause, drawResults, drawTitle, drawUpgradeChoice, updateTitleScene } from './screens.js';
+import { bossIsNext, cardAt, difficultyAt, createTitleScene, drawPause, drawResults, drawTitle, drawUpgradeChoice, updateTitleScene } from './screens.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
 import { applyUpgrade, dealUpgradeCards, upgradeById } from './upgrades.js';
 import { clearEffects, updateEffects } from './particles.js';
-import { loadBestScore, loadMuted, saveBestScore, saveMuted } from './storage.js';
+import { loadBestScore, loadFeats, loadMuted, loadRuns, saveBestScore, saveFeats, saveMuted, saveRun } from './storage.js';
+import { DIFFICULTIES, FEATS } from './rules.js';
 import { simRandom } from './random.js';
 import { runShotScene } from './shots.js';
 
@@ -25,7 +26,12 @@ const game = {
   titleScene: createTitleScene(),
   hand: [],
   hovered: -1,
-  best: loadBestScore(),
+  difficulty: 'standard',
+  bests: {},
+  best: 0,
+  feats: [],
+  runs: [],
+  runFeats: [],
   newBest: false,
   previousBest: 0,
   colour: 0,
@@ -63,10 +69,30 @@ function setMode(mode) {
   game.modeTime = 0;
 }
 
+/** Reads the saved profile: best score per difficulty, feats, last runs. */
+function loadProfile() {
+  for (const difficulty of DIFFICULTIES) game.bests[difficulty.id] = loadBestScore(difficulty.id);
+  game.best = game.bests[game.difficulty];
+  game.feats = loadFeats();
+  game.runs = loadRuns();
+}
+
+/** Records a finished run: best for its difficulty, feats earned, the run itself. */
+function finishRun(world) {
+  const mode = world.difficulty;
+  game.previousBest = game.bests[mode];
+  game.newBest = world.score > game.previousBest;
+  game.bests[mode] = game.best = saveBestScore(world.score, mode);
+  game.runFeats = FEATS.filter((feat) => feat.earned(world)).map((feat) => feat.name);
+  game.feats = saveFeats(game.runFeats);
+  game.runs = saveRun({ score: world.score, wave: world.wave, won: world.state === 'won', mode });
+}
+
 /** A fresh run from wave 1. */
 export function startRun(seed = (Date.now() ^ (performance.now() * 1000)) >>> 0) {
   clearEffects();
-  game.world = createWorld(seed);
+  game.world = createWorld(seed, game.difficulty);
+  game.best = game.bests[game.difficulty];
   game.colour = 0;
   game.newBest = false;
   setMode('play');
@@ -109,12 +135,19 @@ function handleScreenInput() {
   if (presses.includes('KeyM')) toggleMute();
 
   switch (game.mode) {
-    case 'title':
-      if (clicks > 0 || presses.includes('Enter') || presses.includes('Space')) {
+    case 'title': {
+      const step = presses.filter((code) => code === 'ArrowRight').length - presses.filter((code) => code === 'ArrowLeft').length;
+      const chip = clicks > 0 ? difficultyAt(input.mouseX, input.mouseY) : -1;
+      if (step !== 0 || chip >= 0) {
+        const index = chip >= 0 ? chip : (DIFFICULTIES.findIndex((d) => d.id === game.difficulty) + step + 3) % 3;
+        game.difficulty = DIFFICULTIES[index].id;
+        playSound('select', index);
+      } else if (clicks > 0 || presses.includes('Enter') || presses.includes('Space')) {
         playSound('click');
         startRun();
       }
       break;
+    }
     case 'play': {
       if (presses.includes('KeyP') || presses.includes('Escape')) {
         setMode('paused');
@@ -220,15 +253,13 @@ function stepGame(dt) {
     }, dt);
     playWorldEvents(world);
     if (game.mode === 'play' && world.state === 'cleared' && world.stateTime > 1.3) {
-      game.hand = dealUpgradeCards(world.upgrades, simRandom, world.core.hp / world.core.maxHp);
+      game.hand = dealUpgradeCards(world.upgrades, simRandom, world.core.hp / world.core.maxHp, world.wave);
       game.hovered = -1;
       setMode('upgrade');
       setMusicMood('calm');
     }
     if (game.mode === 'play' && (world.state === 'won' || world.state === 'lost') && world.stateTime > 2.4) {
-      game.previousBest = game.best;
-      game.newBest = world.score > game.best;
-      game.best = saveBestScore(world.score);
+      finishRun(world);
       setMode('results');
     }
   }
@@ -251,13 +282,13 @@ export function drawFrame() {
   const world = game.world;
   switch (game.mode) {
     case 'title':
-      drawTitle(ctx, game.titleScene, game.best, game.time);
+      drawTitle(ctx, game.titleScene, game, game.time);
       break;
     case 'upgrade':
       drawUpgradeChoice(ctx, world, game.hand, game.hovered, game.time);
       break;
     case 'results':
-      drawResults(ctx, world, game.best, game.newBest, game.previousBest, game.time);
+      drawResults(ctx, world, game, game.time);
       break;
     default:
       drawWorld(ctx, world, game.time, game.mode === 'play');
@@ -290,6 +321,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && game.mode === 'play') setMode('paused');
 });
 setMuted(loadMuted());
+loadProfile();
 fitCanvas();
 
 /** Read-only handle for automated playtests: the current screen and run. */
@@ -300,7 +332,7 @@ const artReady = loadArt();
 if (params.has('shot')) {
   game.frozen = true;
   artReady.then(() => {
-    runShotScene(game, params.get('shot'), Number(params.get('seed') ?? 7), { setMode, drawFrame, startRun });
+    runShotScene(game, params.get('shot'), Number(params.get('seed') ?? 7), { setMode, drawFrame, startRun, finishRun, loadProfile });
     if (params.has('live')) {
       game.frozen = false;
       last = performance.now();

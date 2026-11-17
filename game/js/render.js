@@ -2,7 +2,7 @@
 import { ARENA_H, ARENA_W, CORE_RADIUS, CORE_X, CORE_Y, FONT, LIGHTS, TAU } from './config.js';
 import { drawLightGlyph } from './icons.js';
 import { drawFloaters, drawParticles, drawScorches } from './particles.js';
-import { PRISMLING_PERIOD } from './shades.js';
+import { lightHarmsShade, PRISMLING_PERIOD } from './shades.js';
 import { drawCreature, drawFloor, drawSprite } from './sprites.js';
 import { CHARGE_TIME } from './boss.js';
 
@@ -436,7 +436,28 @@ function drawBeams(ctx, beams, time) {
   }
   ctx.globalCompositeOperation = 'source-over';
   for (const beam of beams) drawLightGlyph(ctx, beam.colour, beam.endX, beam.endY, 6, 0.95);
+  for (const beam of beams) {
+    const hit = beam.hits.find((h) => !h.shade.dead && !lightHarmsShade(h.shade, h.part, beam.colour));
+    if (hit) drawWrongColourTag(ctx, hit.shade.x, hit.shade.y - hit.shade.r * 1.6 - 14, LIGHTS[beam.colour].hex);
+  }
   ctx.restore();
+}
+
+/** Where a beam glances off a Shade of another colour: a small ink tag, so the rule shows itself. */
+function drawWrongColourTag(ctx, x, y, colour) {
+  ctx.font = `900 12px ${FONT}`;
+  const w = ctx.measureText('× WRONG COLOUR').width + 14;
+  ctx.beginPath();
+  ctx.roundRect(x - w / 2, y - 10, w, 20, 10);
+  ctx.fillStyle = 'rgba(42,26,18,0.9)';
+  ctx.fill();
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff4dc';
+  ctx.fillText('× WRONG COLOUR', x, y + 1);
 }
 
 /** The Warden: a robed keeper facing where it casts, its lantern staff tipped with cut crystal glowing in the chosen colour. */

@@ -153,6 +153,20 @@ export function drawUpgradeIcon(ctx, id, x, y, size) {
         ctx.fill();
       }
       break;
+    case 'pact':
+      ctx.beginPath();
+      ctx.arc(-4, -6, 34, 0.6, Math.PI * 1.9);
+      ctx.arc(10, -14, 26, Math.PI * 1.75, 0.75, true);
+      ctx.closePath();
+      ctx.fillStyle = ember;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(20, 18);
+      ctx.quadraticCurveTo(32, 34, 20, 44);
+      ctx.quadraticCurveTo(8, 34, 20, 18);
+      ctx.fillStyle = '#ff9aa8';
+      ctx.fill();
+      break;
     default:
       break;
   }

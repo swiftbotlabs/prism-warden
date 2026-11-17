@@ -1,22 +1,22 @@
 [
   {
     "name": "1-play.jpg",
-    "query": "?shot=play&seed=114036&step=17307&reaction=0.3&focus=1&legion=2",
-    "shows": "A battle round THE ECLIPSE in the Lantern Observatory: the moon-faced boss in its last phase (TOTALITY, shifting colour, Azure now) under its corona crown, ringed by 9 visible creatures (hooded imps, an ink-toad Splitter, soot-moths, Shadow Ring ink drops) in several colours. The robed Warden casts Azure from his crystal lantern staff into it while the Ember and Verdant Prism branches bounce off brass mirrors into creatures of the other colours. Combo x4, Core 15/15, nothing over the moon's face, and the cream-and-brass HUD (WIN/LOSE line, '0 = RUN LOST', boss phase bar, INCOMING portraits, event log with chain kills, MATCH COLOUR, build cards, key caps). Found by tools/find-cover.mjs over 1,200 runs; the replay adds two minions per boss legion (&legion=2), because frames that also meet every framing rule did not occur without it. Normal play keeps the standard legions and shows 8+ creatures in about 13% of boss-fight frames."
+    "query": "?shot=play&seed=81918&step=7932&reaction=0.3&focus=1",
+    "shows": "An unmodified, seeded frame of normal play on wave 6 in the Lantern Observatory. The Prism split sends Ember, Verdant and Azure beams bouncing off brass mirrors, each harming a creature of its own colour, while two beams glance off creatures of another colour and the game tags them '\u00d7 WRONG COLOUR', so the still frame teaches the rule. 14 creatures are in view (hooded imps, Bulwarks with three-colour shells, a Prismling, a soot-moth). Combo x6, Core 12/12, and the cream-and-brass HUD (WIN/LOSE line, '0 = RUN LOST', wave goal, INCOMING, event log, MATCH COLOUR, build cards, key caps). Chosen by tools/find-cover.mjs (teach mode) from 1,200 autopilot runs."
   },
   {
     "name": "2-title.jpg",
     "query": "?shot=title&seed=7",
-    "shows": "The title over the Lantern Observatory: the PRISM WARDEN logo, 'Bend light. Hold the core.', the OBJECTIVE (WIN/LOSE) and depth lines, the Warden at the orrery Core with creatures around him and mirrors bending beams, cream panels for controls and the rules of light, BEST SCORE 28,410 and a brass 'CLICK TO BEGIN'."
+    "shows": "The title over the Lantern Observatory: logo, OBJECTIVE (WIN/LOSE), '10 waves \u00b7 7 kinds of Shade \u00b7 10 upgrades \u00b7 a three-phase boss', a roster of THE SHADES with a portrait and one behaviour line each, the rules of light, the difficulty choice GENTLE / STANDARD (best 28,410) / ECLIPSE+, 'CLICK TO BEGIN', FEATS 3/8 and key caps for every control."
   },
   {
     "name": "3-upgrade.jpg",
     "query": "?shot=upgrade&seed=7",
-    "shows": "WAVE 9 CLEARED: an ink plate previews 'NEXT: THE ECLIPSE' (its calm moon face under an Ember crown) with its three phases, above three cream upgrade cards (icon, level, effect, how each combines with the build), the run's status and YOUR BUILD as icon cards."
+    "shows": "WAVE 9 CLEARED: 'NEXT: THE ECLIPSE' with its calm moon face and three phases, then three cards: Swift (completes QUICKSILVER), Reflect (strengthens KALEIDOSCOPE) and the Ember Pact trade-off (+25% beam damage, PRICE: -4 Core max HP; completes BLOOD MOON). YOUR BUILD is named KALEIDOSCOPE + STARFALL + BURNING GLASS."
   },
   {
     "name": "4-results.jpg",
     "query": "?shot=results&seed=7",
-    "shows": "VICTORY over the observatory with THE ECLIPSE's grey, cracked moon face beneath the title, a cream stats panel (waves, Shades dispelled, colour accuracy, best combo, time), score 40,035 marked NEW BEST over 28,410, the build taken, a brass 'Press R or click to play again', and the lose path named underneath."
+    "shows": "VICTORY with THE ECLIPSE's cracked moon face: a score-per-wave chart, the last three runs, the stats, score 40,035 as NEW BEST over 28,410, the feats earned (4/8), the next goal (Win on ECLIPSE+), the build named by its synergies, and 'Press R or click to play again'."
   }
 ]

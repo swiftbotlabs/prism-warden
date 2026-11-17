@@ -1,18 +1,13 @@
 // THE ECLIPSE, the wave-10 boss: three phases with their own colour and orbit, minion legions from the edges, and a telegraphed Shadow Ring.
-import { ARENA_W, AZURE, CORE_X, CORE_Y, EMBER, LIGHTS, TAU, WHITE } from './config.js';
+import { ARENA_W, CORE_X, CORE_Y, EMBER, LIGHTS, TAU, WHITE } from './config.js';
+import { BOSS_PHASES } from './rules.js';
 import { createShade, edgeSpawnPoint } from './shades.js';
 import { simRandom } from './random.js';
 
-/** Boss phases: shell colour (-1 = cycles), health, orbit, the legion it calls from the edges and how often, its Shadow Ring. */
-export const ECLIPSE_PHASES = [
-  { name: 'UMBRA', colour: EMBER, hp: 30, orbitSpeed: 0.2, radius: 300, legion: ['drifter', 'drifter', 'darter'], every: 5, ring: 8, blurb: 'Ember shell · Drifter legions' },
-  { name: 'PENUMBRA', colour: AZURE, hp: 36, orbitSpeed: 0.32, radius: 285, legion: ['darter', 'drifter', 'darter', 'prismling'], every: 5.5, ring: 10, blurb: 'Azure shell · Darter legions' },
-  { name: 'TOTALITY', colour: -1, hp: 44, orbitSpeed: 0.4, radius: 250, legion: ['splitter', 'darter', 'prismling', 'drifter', 'darter'], every: 6, ring: 12, blurb: 'colour shifts · rings of shadow' },
-];
 /** Breaks the current phase: the next one starts at full health with its own colour, orbit and summons. */
 export function nextEclipsePhase(boss) {
   boss.phase += 1;
-  boss.hp = ECLIPSE_PHASES[boss.phase].hp;
+  boss.hp = BOSS_PHASES[boss.phase].hp;
   boss.maxHp = boss.hp;
   boss.broken = 1.2;
   boss.summonTimer = 1.5;
@@ -24,7 +19,7 @@ export function damageEclipsePhase(boss, amount) {
   boss.hp -= amount;
   boss.flash = 0.06;
   if (boss.hp > 0) return 'hit';
-  if (boss.phase >= ECLIPSE_PHASES.length - 1) {
+  if (boss.phase >= BOSS_PHASES.length - 1) {
     boss.dead = true;
     return 'dead';
   }
@@ -38,7 +33,7 @@ const TOTALITY_SHIFT = 2.6;
 export function createEclipse() {
   const boss = createShade('eclipse', EMBER, ARENA_W / 2, -90, 1, true);
   boss.phase = 0;
-  boss.hp = ECLIPSE_PHASES[0].hp;
+  boss.hp = BOSS_PHASES[0].hp;
   boss.maxHp = boss.hp;
   boss.orbit = -Math.PI / 2;
   boss.orbitRadius = 300;
@@ -52,7 +47,7 @@ export function createEclipse() {
 
 /** Moves THE ECLIPSE along its orbit, cycles its colour in the last phase, and summons minions into `world.shades`. */
 export function updateEclipse(world, boss, dt) {
-  const phase = ECLIPSE_PHASES[boss.phase];
+  const phase = BOSS_PHASES[boss.phase];
   boss.age += dt;
   boss.flash = Math.max(0, boss.flash - dt);
   boss.broken = Math.max(0, boss.broken - dt);
@@ -97,7 +92,7 @@ export const CHARGE_TIME = 1.5;
 /** A legion of minions from the arena edges, spread round the field, their colours rotating through all three lights. */
 function summonLegion(world, kinds) {
   const offset = Math.floor(simRandom() * 3);
-  for (let i = 0; i < kinds.length + (world.legionBonus ?? 0); i += 1) {
+  for (let i = 0; i < kinds.length; i += 1) {
     const point = edgeSpawnPoint(simRandom);
     world.shades.push(createShade(kinds[i % kinds.length], (offset + i) % 3, point.x, point.y, world.speedScale, false, world.toughness));
   }
@@ -117,6 +112,6 @@ function releaseShadowRing(world, boss, count) {
 
 /** The name and colour label the HUD shows above the boss bar. */
 export function eclipseTitle(boss) {
-  const phase = ECLIPSE_PHASES[boss.phase];
+  const phase = BOSS_PHASES[boss.phase];
   return `THE ECLIPSE · ${phase.name} · ${phase.colour >= 0 ? LIGHTS[phase.colour].name.toUpperCase() : 'SHIFTING'}`;
 }

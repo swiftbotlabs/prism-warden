@@ -8,7 +8,7 @@ import { STEP } from '../game/js/config.js';
 const reaction = Number(process.env.REACTION ?? 0);
 const seeds = process.argv.slice(2).map(Number);
 for (const seed of seeds.length ? seeds : [1, 2, 3, 4, 5]) {
-  const world = createWorld(seed);
+  const world = createWorld(seed, process.env.DIFF ?? 'standard');
   const log = [];
   const pilot = createPilot(reaction, Number(process.env.AIM ?? 0));
   let waveStart = 0;
@@ -18,7 +18,7 @@ for (const seed of seeds.length ? seeds : [1, 2, 3, 4, 5]) {
     stepWorld(world, autopilotControls(world, pilot, STEP), STEP);
     world.events.length = 0;
     if (world.state === 'cleared' && world.stateTime > 1.2) {
-      const hand = dealUpgradeCards(world.upgrades, simRandom, world.core.hp / world.core.maxHp);
+      const hand = dealUpgradeCards(world.upgrades, simRandom, world.core.hp / world.core.maxHp, world.wave);
       const pick = hand[autopilotPick(hand, world.upgrades)];
       applyUpgrade(world, pick);
       log.push(`w${world.wave} ${(world.time - waveStart).toFixed(0)}s hp${world.core.hp} ${pick}`);

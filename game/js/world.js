@@ -2,18 +2,22 @@
 import { COMBO_TUNING, CORE_BASE_HP, CORE_RADIUS, CORE_X, CORE_Y, LIGHTS, TOTAL_WAVES, WHITE } from './config.js';
 import { createWarden, steerWarden, beamOrigin } from './warden.js';
 import { castPrismBeams } from './beam.js';
-import { createShade, lightHarmsShade, moveShades, SHADE_KINDS } from './shades.js';
+import { createShade, lightHarmsShade, moveShades } from './shades.js';
+import { DIFFICULTIES, SHADE_KINDS, WAVE_TABLE } from './rules.js';
 import { damageEclipsePhase, updateEclipse } from './boss.js';
-import { startWave, updateDirector, isWaveCleared, WAVE_PLAN } from './waves.js';
+import { startWave, updateDirector, isWaveCleared } from './waves.js';
 import { beamStats, chainDamage, createUpgradeLevels, harvestChance } from './upgrades.js';
 import { burst, chainArc, floatText, killRing, scorch, sparks } from './particles.js';
 import { fxRandom, seedRandom, simRandom } from './random.js';
 
 /** A fresh run on wave 1. `seed` makes the whole run (spawns, mirrors, cards) repeatable. */
-export function createWorld(seed) {
+export function createWorld(seed, difficulty = 'standard') {
   seedRandom(seed);
   const world = {
     seed,
+    difficulty,
+    scoreScale: DIFFICULTIES.find((d) => d.id === difficulty).score,
+    recentKills: [],
     time: 0,
     wave: 0,
     state: 'fight',
@@ -34,7 +38,7 @@ export function createWorld(seed) {
     combo: 0,
     comboTimer: 0,
     hitting: false,
-    stats: { kills: 0, onTarget: 0, offTarget: 0, bestCombo: 0, coreHits: 0, wavesCleared: 0, time: 0 },
+    stats: { kills: 0, onTarget: 0, offTarget: 0, bestCombo: 0, coreHits: 0, wavesCleared: 0, time: 0, burst: 0, waveScores: [] },
     shake: 0,
     slowmo: 0,
     banner: null,
@@ -57,7 +61,7 @@ export function beginWave(world, number) {
   world.state = 'fight';
   world.stateTime = 0;
   world.core.shield = world.upgrades.bastion;
-  world.banner = { title: number === TOTAL_WAVES ? 'FINAL WAVE' : `WAVE ${number}`, sub: WAVE_PLAN[number - 1].title, time: 0 };
+  world.banner = { title: number === TOTAL_WAVES ? 'FINAL WAVE' : `WAVE ${number}`, sub: WAVE_TABLE[number - 1].title, time: 0 };
   world.events.push({ type: 'wave', wave: number });
   logEvent(world, `Wave ${number} begins`, '#ffd46e');
 }
@@ -124,8 +128,9 @@ export function stepWorld(world, controls, dt) {
     endRun(world, 'lost');
   } else if (world.state === 'fight' && isWaveCleared(world)) {
     world.stats.wavesCleared += 1;
-    const bonus = 50 * world.wave;
+    const bonus = Math.round(50 * world.wave * world.scoreScale);
     world.score += bonus;
+    recordWaveScore(world);
     floatText(CORE_X, CORE_Y - 70, `WAVE CLEAR +${bonus}`, '#ffd46e', 24, 1.2);
     logEvent(world, `Wave ${world.wave} cleared +${bonus}`, '#ffd46e');
     if (world.wave >= TOTAL_WAVES) endRun(world, 'won');
@@ -137,7 +142,13 @@ export function stepWorld(world, controls, dt) {
   }
 }
 
+/** Notes the score gained this wave, for the results chart. */
+function recordWaveScore(world) {
+  world.stats.waveScores.push(world.score - world.stats.waveScores.reduce((sum, value) => sum + value, 0));
+}
+
 function endRun(world, outcome) {
+  if (outcome === 'lost') recordWaveScore(world);
   world.state = outcome;
   world.stateTime = 0;
   world.beams = [];
@@ -235,7 +246,7 @@ function applyBeams(world, dt) {
 function hurtEclipse(world, boss, amount, colour) {
   const result = damageEclipsePhase(boss, amount);
   if (result === 'phase' || result === 'dead') {
-    const points = (result === 'dead' ? 2000 : 500) * comboMultiplier(world);
+    const points = Math.round((result === 'dead' ? 2000 : 500) * comboMultiplier(world) * world.scoreScale);
     world.score += points;
     world.slowmo = result === 'dead' ? 1.4 : 0.9;
     world.shake = 20;
@@ -264,8 +275,10 @@ function killShade(world, shade, colour, depth) {
   world.comboTimer = COMBO_TUNING.window;
   world.stats.bestCombo = Math.max(world.stats.bestCombo, world.combo);
   world.stats.kills += 1;
+  world.recentKills = world.recentKills.filter((t) => world.time - t < 1).concat(world.time);
+  world.stats.burst = Math.max(world.stats.burst, world.recentKills.length);
   const multiplier = comboMultiplier(world);
-  const points = shade.value * multiplier;
+  const points = Math.round(shade.value * multiplier * world.scoreScale);
   world.score += points;
   const light = LIGHTS[shade.colour];
   floatText(shade.x, shade.y - shade.r - 8, `+${points}`, LIGHTS[colour].hex, 15 + Math.min(multiplier, 6) * 2);

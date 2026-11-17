@@ -1,35 +1,12 @@
 // The wave director: the ten-wave plan, each wave's spawn queue (kind, colour, edge, timing), its progress and when it is cleared.
-import { EMBER, VERDANT, AZURE, WHITE, ARENA_W, ARENA_H, TOTAL_WAVES } from './config.js';
+import { WHITE, ARENA_W, ARENA_H, TOTAL_WAVES } from './config.js';
+import { DIFFICULTIES, WAVE_TABLE } from './rules.js';
 import { createShade, edgeSpawnPoint } from './shades.js';
 import { createEclipse } from './boss.js';
 import { layoutMirrors } from './arena.js';
 import { simRandom, simShuffle } from './random.js';
 
-const ALL = [EMBER, VERDANT, AZURE];
 
-/** Ten waves: who comes, which colours, the gap between spawns, the chance of a white Shade, and the first-time hint. */
-export const WAVE_PLAN = [
-  { title: 'First Light', mix: { drifter: 8 }, colours: [EMBER], gap: 1.5, white: 0,
-    hint: 'Hold the left mouse button to cast light. Ember (1) burns red Shades.' },
-  { title: 'Two Hues', mix: { drifter: 14 }, colours: [EMBER, VERDANT], gap: 1.15, white: 0,
-    hint: 'Press 2 (or scroll) for Verdant. Only light of a Shade\'s own colour harms it.' },
-  { title: 'Darters', mix: { drifter: 10, darter: 9 }, colours: ALL, gap: 0.95, white: 0,
-    hint: 'Azure is 3. Darters zig-zag fast. Bounce light off mirror shards to reach them.' },
-  { title: 'Splitters', mix: { drifter: 9, darter: 8, splitter: 5 }, colours: ALL, gap: 0.95, white: 0,
-    hint: 'Splitters burst into two small Shades of the other colours.' },
-  { title: 'Prismlings', mix: { drifter: 9, darter: 9, splitter: 4, prismling: 6 }, colours: ALL, gap: 0.86, white: 0.08,
-    hint: 'Prismlings change colour every 2 s. White Shades fall to any light.' },
-  { title: 'Bulwarks', mix: { drifter: 10, darter: 10, splitter: 5, prismling: 6, bulwark: 3 }, colours: ALL, gap: 0.8, white: 0.08,
-    hint: 'Break one Bulwark shell segment with its colour, then hit its heart through the gap.' },
-  { title: 'Converging Dark', mix: { drifter: 13, darter: 13, splitter: 7, prismling: 7, bulwark: 4 }, colours: ALL, gap: 0.72, white: 0.1 },
-  { title: 'Storm of Hues', mix: { drifter: 14, darter: 15, splitter: 8, prismling: 9, bulwark: 4 }, colours: ALL, gap: 0.66, white: 0.1 },
-  { title: 'The Last Dusk', mix: { drifter: 15, darter: 17, splitter: 9, prismling: 10, bulwark: 5 }, colours: ALL, gap: 0.62, white: 0.1 },
-  { title: 'THE ECLIPSE', mix: { drifter: 10, darter: 8, prismling: 4 }, colours: ALL, gap: 2.4, white: 0.15, boss: true,
-    hint: 'Match the Eclipse\'s colour to break its phases. Survive all three.' },
-];
-
-/** How a run is won and lost, in the words the HUD, the title and the results use. */
-export const RUN_CONDITIONS = { win: `break THE ECLIPSE after wave ${TOTAL_WAVES}`, lose: 'the Core shatters' };
 
 /** The run's goal as the HUD states it: hold the waves, then break THE ECLIPSE on the last one to win. */
 export function waveGoalText(wave) {
@@ -55,13 +32,14 @@ export function waveToughness(wave) {
 
 /** Begins wave `number` (1-based): new mirror layout, a shuffled spawn queue, and the boss on wave 10. */
 export function startWave(world, number) {
-  const plan = WAVE_PLAN[number - 1];
+  const plan = WAVE_TABLE[number - 1];
   world.wave = number;
-  world.speedScale = waveSpeedScale(number);
+  const difficulty = DIFFICULTIES.find((d) => d.id === world.difficulty);
+  world.speedScale = waveSpeedScale(number) * difficulty.speed;
   world.toughness = waveToughness(number);
   world.mirrors = layoutMirrors(number, simRandom);
   const kinds = [];
-  for (const [kind, count] of Object.entries(plan.mix)) for (let i = 0; i < count; i += 1) kinds.push(kind);
+  for (const [kind, count] of Object.entries(plan.mix)) for (let i = 0; i < Math.max(1, Math.round(count * difficulty.count)); i += 1) kinds.push(kind);
   simShuffle(kinds);
   const queue = kinds.map((kind, index) => ({
     kind,

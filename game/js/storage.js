@@ -1,39 +1,60 @@
-// Saves and loads the best score and the mute setting in localStorage, quietly doing nothing where storage is blocked.
-const BEST_KEY = 'prism-warden.best-score';
-const MUTE_KEY = 'prism-warden.muted';
+// Saves and loads, in localStorage: the best score per difficulty, the feats earned, the last three runs and the mute setting.
+const KEY = 'prism-warden';
 
-export function loadBestScore() {
+function read(name, fallback) {
   try {
-    return Math.max(0, Number(localStorage.getItem(BEST_KEY)) || 0);
+    return JSON.parse(localStorage.getItem(`${KEY}.${name}`)) ?? fallback;
   } catch {
-    return 0;
+    return fallback;
   }
 }
 
-/** Stores `score` if it beats the saved best; returns the best after the call. */
-export function saveBestScore(score) {
-  const best = loadBestScore();
-  if (score <= best) return best;
+function write(name, value) {
   try {
-    localStorage.setItem(BEST_KEY, String(Math.floor(score)));
+    localStorage.setItem(`${KEY}.${name}`, JSON.stringify(value));
   } catch {
-    // Storage blocked (private mode, file://): the best lives for this page only.
+    // Storage blocked (private mode, file://): progress lives for this page only.
   }
-  return score;
+}
+
+export function loadBestScore(mode = 'standard') {
+  return Math.max(0, Number(read(`best-${mode}`, 0)) || 0);
+}
+
+/** Stores `score` if it beats the best for `mode`; returns the best after the call. */
+export function saveBestScore(score, mode = 'standard') {
+  const best = loadBestScore(mode);
+  if (score > best) write(`best-${mode}`, Math.floor(score));
+  return Math.max(best, score);
+}
+
+/** Names of the feats earned in any run so far. */
+export function loadFeats() {
+  return read('feats', []);
+}
+
+/** Adds newly earned feat names; returns the full list. */
+export function saveFeats(names) {
+  const all = [...new Set([...loadFeats(), ...names])];
+  write('feats', all);
+  return all;
+}
+
+/** The last three runs, newest first: {score, wave, won, mode}. */
+export function loadRuns() {
+  return read('runs', []);
+}
+
+export function saveRun(run) {
+  const runs = [run, ...loadRuns()].slice(0, 3);
+  write('runs', runs);
+  return runs;
 }
 
 export function loadMuted() {
-  try {
-    return localStorage.getItem(MUTE_KEY) === '1';
-  } catch {
-    return false;
-  }
+  return read('muted', false) === true;
 }
 
 export function saveMuted(muted) {
-  try {
-    localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
-  } catch {
-    // Not persisted; the toggle still works for this session.
-  }
+  write('muted', muted);
 }

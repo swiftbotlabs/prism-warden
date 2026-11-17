@@ -1,5 +1,6 @@
 // Upgrade cards offered between waves: what each does, its level cap, how three are dealt, and the stats they add up to.
 import { BEAM_TUNING, WARDEN_TUNING } from './config.js';
+import { SYNERGIES } from './rules.js';
 
 export const UPGRADES = [
   { id: 'prism', name: 'Prism', max: 2, line: '+1 beam branch in another colour' },
@@ -11,49 +12,20 @@ export const UPGRADES = [
   { id: 'bastion', name: 'Bastion', max: 3, line: '+3 Core HP, repair, +1 shield' },
   { id: 'swift', name: 'Swift', max: 3, line: '+18% Warden speed' },
   { id: 'harvest', name: 'Harvest', max: 3, line: 'Kills drop motes that heal the Core' },
+  { id: 'pact', name: 'Ember Pact', max: 1, line: '+25% beam damage', price: 'PRICE: -4 Core max HP' },
 ];
 
-/** How a card combines with what the run already owns, in one short line (or what it is good for, if nothing). */
+/** How a card plays with the run: the named synergy it completes (or strengthens), else the one it would start, else nothing. */
 export function upgradeSynergy(id, levels) {
-  const owns = (other) => levels[other] > 0;
-  switch (id) {
-    case 'prism':
-      if (owns('reflect')) return 'with Reflect: every branch bounces too';
-      if (owns('lance')) return 'with Lance: every branch pierces';
-      if (owns('focus')) return 'with Focus: branches hit harder too';
-      return 'hit Shades of two colours at once';
-    case 'reflect':
-      if (owns('prism')) return 'with Prism: split beams bounce too';
-      return 'bank shots reach Shades behind you';
-    case 'focus':
-      if (owns('prism')) return 'with Prism: branches hit harder too';
-      if (owns('lens')) return 'with Lens: the damage bonuses stack';
-      return 'Bulwarks and THE ECLIPSE fall faster';
-    case 'lens':
-      if (owns('lance')) return 'with Lance: a wide beam pierces crowds';
-      if (owns('prism')) return 'with Prism: every branch widens';
-      return 'easier to catch zig-zagging Darters';
-    case 'chain':
-      if (owns('prism')) return 'with Prism: more kills start more arcs';
-      if (owns('lance')) return 'with Lance: pierce kills arc onward';
-      return 'clears packs of one colour';
-    case 'lance':
-      if (owns('prism')) return 'with Prism: every branch pierces';
-      if (owns('lens')) return 'with Lens: a wide beam pierces crowds';
-      return 'hits a second Shade in line';
-    case 'bastion':
-      if (owns('harvest')) return 'with Harvest: motes refill a bigger Core';
-      return 'more room for mistakes';
-    case 'swift':
-      if (owns('reflect')) return 'with Reflect: reposition for bank shots';
-      return 'reach the far side of the Core sooner';
-    case 'harvest':
-      if (owns('chain')) return 'with Chain: more kills, more motes';
-      if (owns('bastion')) return 'with Bastion: heal into a bigger Core';
-      return 'turns kills into Core HP';
-    default:
-      return '';
-  }
+  const pairs = SYNERGIES.filter((synergy) => synergy.pair.includes(id));
+  const done = pairs.find((synergy) => synergy.pair.every((part) => part === id || levels[part] > 0));
+  if (done) return { completes: true, text: `${levels[id] > 0 ? 'strengthens' : 'completes'} ${done.name}: ${done.line}` };
+  return pairs[0] ? { completes: false, text: `pairs with ${upgradeById(pairs[0].pair.find((part) => part !== id)).name}: ${pairs[0].name}` } : null;
+}
+
+/** The named synergies a build has completed. */
+export function buildSynergies(levels) {
+  return SYNERGIES.filter((synergy) => synergy.pair.every((part) => levels[part] > 0));
 }
 
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
@@ -71,9 +43,12 @@ export function createUpgradeLevels() {
   return Object.fromEntries(UPGRADES.map((upgrade) => [upgrade.id, 0]));
 }
 
-/** Deals `count` different cards that are not yet maxed; Bastion is favoured when the Core is low. */
-export function dealUpgradeCards(levels, random, coreRatio = 1, count = 3) {
-  const pool = UPGRADES.filter((upgrade) => levels[upgrade.id] < upgrade.max).map((upgrade) => ({
+/** Waves after which the Ember Pact replaces the last card (it is never drawn at random, so the deals stay as tuned). */
+const PACT_WAVES = [3, 6, 9];
+
+/** Deals `count` different cards that are not maxed (Bastion favoured when the Core is low); the Pact joins on PACT_WAVES. */
+export function dealUpgradeCards(levels, random, coreRatio = 1, wave = 0, count = 3) {
+  const pool = UPGRADES.filter((upgrade) => !upgrade.price && levels[upgrade.id] < upgrade.max).map((upgrade) => ({
     id: upgrade.id,
     weight: (upgrade.id === 'bastion' && coreRatio < 0.5 ? 3 : 1) * (levels[upgrade.id] === 0 ? 1.2 : 1),
   }));
@@ -89,10 +64,11 @@ export function dealUpgradeCards(levels, random, coreRatio = 1, count = 3) {
     hand.push(pool[index].id);
     pool.splice(index, 1);
   }
+  if (PACT_WAVES.includes(wave) && levels.pact === 0) hand[count - 1] = 'pact';
   return hand;
 }
 
-/** Applies one card to a run: raises its level and does any one-off effect (Bastion repairs the Core). */
+/** Applies one card to a run: raises its level and does any one-off effect (Bastion repairs the Core; the Pact takes its price). */
 export function applyUpgrade(run, id) {
   run.upgrades[id] += 1;
   if (id === 'bastion') {
@@ -100,13 +76,17 @@ export function applyUpgrade(run, id) {
     run.core.hp = Math.min(run.core.maxHp, run.core.hp + 3);
     run.core.shield = run.upgrades.bastion;
   }
+  if (id === 'pact') {
+    run.core.maxHp -= 4;
+    run.core.hp = Math.min(run.core.hp, run.core.maxHp);
+  }
   run.picks.push(id);
 }
 
 /** What the beam can do with these levels. */
 export function beamStats(levels) {
   return {
-    damage: BEAM_TUNING.dps * (1 + 0.35 * levels.focus) * (1 + 0.15 * levels.lens),
+    damage: BEAM_TUNING.dps * (1 + 0.35 * levels.focus) * (1 + 0.15 * levels.lens) * (1 + 0.25 * levels.pact),
     halfWidth: BEAM_TUNING.halfWidth + 4 * levels.lens,
     branches: levels.prism,
     wallBounces: levels.reflect,

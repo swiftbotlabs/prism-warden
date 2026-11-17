@@ -3,7 +3,7 @@ import { CORE_X, CORE_Y, WHITE } from './config.js';
 import { partStruck } from './shades.js';
 
 /** Card preference when the pilot chooses an upgrade. */
-const PICK_ORDER = ['prism', 'focus', 'reflect', 'lens', 'chain', 'bastion', 'focus', 'lance', 'harvest', 'swift'];
+const PICK_ORDER = ['prism', 'focus', 'reflect', 'lens', 'chain', 'pact', 'bastion', 'focus', 'lance', 'harvest', 'swift'];
 
 /** The most urgent Shade: soonest to reach the Core, with the boss last unless it is alone. */
 function mostUrgentShade(world, bossFocus) {

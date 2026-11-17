@@ -1,13 +1,13 @@
 // Finds the cover frame offline: plays many autopilot runs in Node with the game's own rules, scores every step, and writes
 // the best seed and step into shots.json for 1-play.jpg (the game's ?shot=play replays exactly that step in the browser).
-// Usage: node tools/find-cover.mjs [boss|wave] [runs] [--any-phase] [--legion=N] [--write]
+// Usage: node tools/find-cover.mjs [boss|wave] [runs] [--any-phase] [--loose] [--write]   (modes: boss | teach | wave)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ARENA_H, ARENA_W, CORE_RADIUS, CORE_X, CORE_Y, WHITE } from '../game/js/config.js';
 import { createPilot } from '../game/js/autopilot.js';
 import { playUntil } from '../game/js/shots.js';
 import { clearEffects, floatersNear } from '../game/js/particles.js';
-import { lightHarmsShade } from '../game/js/shades.js';
-import { ECLIPSE_PHASES } from '../game/js/boss.js';
+import { harmingColour, lightHarmsShade } from '../game/js/shades.js';
+import { BOSS_PHASES } from '../game/js/rules.js';
 import { incomingByKind } from '../game/js/waves.js';
 import { UPGRADES } from '../game/js/upgrades.js';
 import { comboMultiplier } from '../game/js/world.js';
@@ -86,13 +86,11 @@ function distanceToBeam(beam, x, y) {
 }
 
 const ANY_PHASE = process.argv.includes('--any-phase');
-/** Extra minions per ECLIPSE legion in the seeded cover replay (normal play keeps 0). */
-const LEGION = Number((process.argv.find((a) => a.startsWith('--legion=')) ?? '--legion=0').split('=')[1]);
 
 function bossDrama(world) {
   const boss = world.boss;
   if (world.state !== 'fight' || world.banner || !boss || boss.dead || boss.entering > 0 || world.director.elapsed < 15) return -1;
-  const health = (ECLIPSE_PHASES.length - 1 - boss.phase + boss.hp / boss.maxHp) / ECLIPSE_PHASES.length;
+  const health = (BOSS_PHASES.length - 1 - boss.phase + boss.hp / boss.maxHp) / BOSS_PHASES.length;
   const main = world.beams[0];
   if (!main || main.colour !== boss.colour || !main.hits.some((hit) => hit.shade === boss)) return reject('warden not casting the boss colour into it');
   if (!ANY_PHASE && (health < 0.3 || health > 0.7)) return reject('boss health outside 30-70%');
@@ -138,25 +136,44 @@ function waveDrama(world) {
   return Math.min(minions.length, 12) + Math.min(bounces, 4) * 3 + (world.core.hp / world.core.maxHp) * 10;
 }
 
-const drama = mode === 'boss' ? bossDrama : waveDrama;
-const done = mode === 'boss' ? (w) => w.wave === 10 && w.boss && w.boss.dead : (w) => w.wave > 8;
-const focus = mode === 'boss';
+/** A teaching frame: the Prism split sends all three colours, each beam harming a creature of its own colour, and one
+ * beam glancing off a creature of another colour (the game tags it WRONG COLOUR). `--loose` lets one beam be the glancing one. */
+const LOOSE = process.argv.includes('--loose');
+function teachDrama(world) {
+  if (world.state !== 'fight' || world.banner || world.beams.length < 3) return -1;
+  const own = (beam) => beam.hits.some((hit) => !hit.shade.dead && harmingColour(hit.shade, hit.part) === beam.colour);
+  const glancing = (beam) => beam.hits.some((hit) => !hit.shade.dead && !lightHarmsShade(hit.shade, hit.part, beam.colour));
+  const owners = world.beams.filter(own).length;
+  if (owners < (LOOSE ? 2 : 3)) return reject('beams not each hitting their own colour');
+  if (!world.beams.some(glancing)) return reject('no beam glancing off another colour');
+  const creatures = world.shades.filter((s) => !s.dead && s.kind !== 'umbra' && s.age > 0.35 && s.x > 25 && s.x < ARENA_W - 25 && s.y > 25 && s.y < ARENA_H - 25);
+  if (creatures.length < 6) return reject('fewer than 6 creatures');
+  if (world.core.hp < world.core.maxHp * 0.6) return reject('Core below 60%');
+  if (!framedClear(world)) return reject('something under the HUD');
+  const boss = world.boss && !world.boss.dead ? 12 : 0;
+  return Math.min(creatures.length, 14) * 2 + new Set(creatures.map((s) => s.kind)).size * 3 + owners * 5 + boss
+    + Math.min(comboMultiplier(world), 6) * 2 + (world.core.hp / world.core.maxHp) * 6;
+}
+
+const drama = mode === 'boss' ? bossDrama : mode === 'teach' ? teachDrama : waveDrama;
+const done = mode === 'boss' ? (w) => w.wave === 10 && w.boss && w.boss.dead : mode === 'teach' ? (w) => w.state === 'won' : (w) => w.wave > 8;
+const focus = mode !== 'wave';
 let best = { seed: 0, step: -1, score: 0 };
 for (let n = 0; n < runs; n += 1) {
   const seed = 7 + n * 101;
   clearEffects();
   playUntil(seed, (world, step) => {
     const score = drama(world);
-    if (score > best.score) best = { seed, step, score, world: { creatures: world.shades.filter((x) => !x.dead && x.kind !== 'eclipse' && x.age > 0.35 && x.x > 25 && x.x < ARENA_W - 25 && x.y > 25 && x.y < ARENA_H - 25 && Math.hypot(x.x - world.boss.x, x.y - world.boss.y) > world.boss.r * 1.3).length, multiplier: comboMultiplier(world), core: `${Math.ceil(world.core.hp)}/${world.core.maxHp}` } };
+    if (score > best.score) best = { seed, step, score, world: { creatures: world.shades.filter((x) => !x.dead && x.kind !== 'eclipse' && x.age > 0.35 && x.x > 25 && x.x < ARENA_W - 25 && x.y > 25 && x.y < ARENA_H - 25 && (!world.boss || Math.hypot(x.x - world.boss.x, x.y - world.boss.y) > world.boss.r * 1.3)).length, multiplier: comboMultiplier(world), core: `${Math.ceil(world.core.hp)}/${world.core.maxHp}` } };
     return done(world);
-  }, createPilot(REACTION, 0, focus), LEGION);
+  }, createPilot(REACTION, 0, focus));
 }
 console.log('rejected by rule:', JSON.stringify(rejected));
 if (best.step < 0) {
   console.log(`no ${mode} frame passed`);
   process.exit(1);
 }
-const query = `?shot=play&seed=${best.seed}&step=${best.step}&reaction=${REACTION}${focus ? '&focus=1' : ''}${LEGION ? `&legion=${LEGION}` : ''}`;
+const query = `?shot=play&seed=${best.seed}&step=${best.step}&reaction=${REACTION}${focus ? '&focus=1' : ''}`;
 if (best.world) console.log(`frame: ${best.world.creatures} creatures, x${best.world.multiplier}, Core ${best.world.core}`);
 console.log(`best ${mode} frame: score ${best.score.toFixed(1)} ${query}`);
 if (process.argv.includes('--write')) {

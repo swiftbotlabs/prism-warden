@@ -3,10 +3,10 @@ import { ARENA_H, ARENA_W, COMBO_TUNING, FONT, LIGHTS, PALETTE, TOTAL_WAVES } fr
 import { drawLightGlyph, drawUpgradeIcon, traceShape } from './icons.js';
 import { drawCreature } from './sprites.js';
 import { upgradeLabel, UPGRADES } from './upgrades.js';
-import { incomingByKind, RUN_CONDITIONS, waveGoalText, waveProgress, WAVE_PLAN } from './waves.js';
+import { incomingByKind, waveGoalText, waveProgress } from './waves.js';
+import { LOSE_RULE, SHADE_KINDS, WAVE_TABLE, WIN_RULE } from './rules.js';
 import { comboMultiplier } from './world.js';
 import { eclipseTitle } from './boss.js';
-import { SHADE_KINDS } from './shades.js';
 
 /** A rounded translucent panel behind HUD text. */
 export function drawPanel(ctx, x, y, w, h, radius = 12, fill = PALETTE.panel, edge = PALETTE.panelEdge) {
@@ -91,7 +91,7 @@ function drawCorePanel(ctx, world, time) {
 function drawWavePanel(ctx, world) {
   const cx = ARENA_W / 2;
   drawPanel(ctx, cx - 180, 14, 360, 90);
-  const plan = WAVE_PLAN[world.wave - 1];
+  const plan = WAVE_TABLE[world.wave - 1];
   text(ctx, `WAVE ${world.wave} / ${TOTAL_WAVES}`, cx, 34, 26, PALETTE.ink, 'center');
   text(ctx, plan.title.toUpperCase(), cx, 56, 14, PALETTE.dim, 'center', 700);
   bar(ctx, cx - 155, 65, 310, 6, waveProgress(world), PALETTE.gold);
@@ -111,8 +111,8 @@ function drawWavePanel(ctx, world) {
 
 /** Width of the WIN / LOSE line at `size` (with an optional lead-in), for layout. */
 function winLoseWidth(ctx, size, prefix) {
-  return textWidth(ctx, prefix, size, 900) + textWidth(ctx, 'WIN: ', size, 900) + textWidth(ctx, `${RUN_CONDITIONS.win}  ·  `, size, 700)
-    + textWidth(ctx, 'LOSE: ', size, 900) + textWidth(ctx, RUN_CONDITIONS.lose, size, 700);
+  return textWidth(ctx, prefix, size, 900) + textWidth(ctx, 'WIN: ', size, 900) + textWidth(ctx, `${WIN_RULE}  ·  `, size, 700)
+    + textWidth(ctx, 'LOSE: ', size, 900) + textWidth(ctx, LOSE_RULE, size, 700);
 }
 
 /** "WIN: break THE ECLIPSE after wave 10 · LOSE: the Core shatters", centred on (cx, y), optionally on a pill and after a gold lead-in. */
@@ -126,9 +126,9 @@ export function drawWinLoseLine(ctx, cx, y, size, onPill = false, prefix = '') {
   };
   if (prefix) part(prefix, PALETTE.gold, 900);
   part('WIN: ', PALETTE.win, 900);
-  part(`${RUN_CONDITIONS.win}  ·  `, PALETTE.ink, 700);
+  part(`${WIN_RULE}  ·  `, PALETTE.ink, 700);
   part('LOSE: ', PALETTE.danger, 900);
-  part(RUN_CONDITIONS.lose, PALETTE.ink, 700);
+  part(LOSE_RULE, PALETTE.ink, 700);
 }
 
 function drawScorePanel(ctx, world, best) {
@@ -272,7 +272,7 @@ function drawBuildTray(ctx, levels) {
 }
 
 function drawHint(ctx, world) {
-  const plan = WAVE_PLAN[world.wave - 1];
+  const plan = WAVE_TABLE[world.wave - 1];
   if (!plan.hint || world.state !== 'fight') return;
   const showFor = world.wave <= 2 ? Infinity : 14;
   if (world.director.elapsed > showFor) return;
@@ -283,7 +283,7 @@ function drawHint(ctx, world) {
 }
 
 /** Key caps for every control, bottom right: two rows of keys with what each does, on one cream panel. */
-function drawKeyCaps(ctx, muted) {
+export function drawKeyCaps(ctx, muted) {
   const rows = [[['WASD', 'move'], ['LMB', 'cast'], ['WHEEL', 'colour']], [['P', 'pause'], ['M', muted ? 'muted' : 'mute'], ['R', 'restart']]];
   const itemWidth = ([key, action]) => textWidth(ctx, key, 13, 900) + 14 + 6 + textWidth(ctx, action, 14, 800) + 14;
   const width = Math.max(...rows.map((row) => row.reduce((sum, item) => sum + itemWidth(item), 0))) + 8;
