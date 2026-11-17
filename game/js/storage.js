@@ -1,4 +1,4 @@
-// Saves and loads, in localStorage: the best score per difficulty, the feats earned, the last three runs and the mute setting.
+// Saves and loads, in localStorage: the best score per difficulty, the feats earned and the mute setting.
 const KEY = 'prism-warden';
 
 function read(name, fallback) {
@@ -38,17 +38,6 @@ export function saveFeats(names) {
   const all = [...new Set([...loadFeats(), ...names])];
   write('feats', all);
   return all;
-}
-
-/** The last three runs, newest first: {score, wave, won, mode}. */
-export function loadRuns() {
-  return read('runs', []);
-}
-
-export function saveRun(run) {
-  const runs = [run, ...loadRuns()].slice(0, 3);
-  write('runs', runs);
-  return runs;
 }
 
 export function loadMuted() {

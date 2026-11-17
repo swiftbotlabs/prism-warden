@@ -4,7 +4,7 @@ import { createWarden, steerWarden, beamOrigin } from './warden.js';
 import { castPrismBeams } from './beam.js';
 import { createShade, lightHarmsShade, moveShades } from './shades.js';
 import { DIFFICULTIES, SHADE_KINDS, WAVE_TABLE } from './rules.js';
-import { damageEclipsePhase, updateEclipse } from './boss.js';
+import { damageEclipsePhase, ENTRANCE_TIME, updateEclipse } from './boss.js';
 import { startWave, updateDirector, isWaveCleared } from './waves.js';
 import { beamStats, chainDamage, createUpgradeLevels, harvestChance } from './upgrades.js';
 import { burst, chainArc, floatText, killRing, scorch, sparks } from './particles.js';
@@ -86,6 +86,11 @@ export function stepWorld(world, controls, dt) {
   if (world.banner) {
     world.banner.time += dt;
     if (world.banner.time > 2.6) world.banner = null;
+  }
+  if (world.cinematic) {
+    world.cinematic.time += dt;
+    if (world.cinematic.time >= ENTRANCE_TIME) world.cinematic = null;
+    return;
   }
   const scale = world.slowmo > 0 ? 0.28 : 1;
   world.slowmo = Math.max(0, world.slowmo - dt);

@@ -8,7 +8,7 @@
 
 Survive ten waves. Each wave brings something new: Drifters, zig-zagging Darters, Splitters that burst into two Shades of the other colours, Prismlings that change colour every 2 s, Umbra orbs from the boss's Shadow Ring, and Bulwarks with rotating three-colour shells whose heart can only be hit through a gap you break. Wave 10 is the boss, **THE ECLIPSE**, with three phases that change its colour and orbit. In each phase it calls legions of minions in all three colours from the arena edges. Every few seconds it telegraphs a **Shadow Ring**: the ground darkens round it, then a ring of Umbra orbs flies out. Any light cuts the orbs, and those that reach the Core crack it. After every wave you pick 1 of 3 upgrade cards: Prism, Reflect, Focus, Lens, Chain, Lance, Bastion, Swift or Harvest. Your score is kills times your combo multiplier, and your best score is saved in the browser.
 
-**Depth.** Pairs of upgrades form named builds: KALEIDOSCOPE (Prism + Reflect), STARFALL (Prism + Chain), SUNLANCE (Lens + Lance), BURNING GLASS (Focus + Lens), HEARTHSTONE (Bastion + Harvest), QUICKSILVER (Swift + Reflect) and BLOOD MOON (Ember Pact + Focus). A card tells you when it completes one. After waves 3, 6 and 9 the **Ember Pact** is offered: +25% beam damage for -4 Core max HP. The title lets you pick **GENTLE**, **STANDARD** or **ECLIPSE+**, which scale Shade numbers, speed and score, with a best score per mode. Eight **feats** are kept across runs. The results show score per wave, your last three runs, the feats you earned and a next goal. When a beam glances off a Shade of the wrong colour, the game tags it "WRONG COLOUR".
+**Depth.** Pairs of upgrades form named builds: KALEIDOSCOPE (Prism + Reflect), STARFALL (Prism + Chain), SUNLANCE (Lens + Lance), BURNING GLASS (Focus + Lens), HEARTHSTONE (Bastion + Harvest), QUICKSILVER (Swift + Reflect) and BLOOD MOON (Ember Pact + Focus). A card tells you when it completes one. After waves 3, 6 and 9 the **Ember Pact** is offered: +25% beam damage for -4 Core max HP. The title lets you pick **GENTLE**, **STANDARD** or **ECLIPSE+**, which scale Shade numbers, speed and score, with a best score per mode. Eight **feats** are kept across runs. The results show your score per wave, four stats, the feats you earned and your build. When a beam glances off a Shade of the wrong colour, the game tags it "WRONG COLOUR".
 
 ### Controls
 
@@ -18,12 +18,13 @@ Survive ten waves. Each wave brings something new: Drifters, zig-zagging Darters
 | Hold left mouse button | cast the beam toward the cursor |
 | 1 / 2 / 3 or mouse wheel | Ember / Verdant / Azure |
 | ← / → or click a chip (title) | choose GENTLE / STANDARD / ECLIPSE+ |
+| B (title) | open the Bestiary: what each Shade does |
 | 1 / 2 / 3 or click (between waves) | pick an upgrade card |
 | P or Esc | pause / resume (Q quits to the title while paused) |
 | M | mute / unmute |
 | R | restart (on the results screen, a click works too) |
 
-The HUD teaches as you play. One line under the wave panel states both conditions: "WIN: break THE ECLIPSE after wave 10 · LOSE: the Core shatters". The title repeats it as the OBJECTIVE, and the victory screen names the lose path too. The Core panel states the stakes ("0 = RUN LOST"), and the wave panel names the goal ("HOLD 3 MORE WAVES · THEN THE ECLIPSE"). An INCOMING panel lists each Shade kind the wave still has to send, with its colours and count. A rule strip by the colour bar says "MATCH THE BEAM TO THE SHADE". Your build shows by name and level ("Prism II"), and a short event log reports chains, broken shells and Core cracks. Each upgrade card also says how it combines with what you already own. When wave 9 is cleared, the upgrade screen previews THE ECLIPSE and names its three phases. The victory screen shows the boss cracked beneath the title. Score popups stack so they never cover each other, and every kill flashes a bright ring in the Shade's colour.
+The HUD stays calm: one slim top bar with big numbers (Core health with "0 = RUN LOST", wave and progress, score and multiplier), a small "WIN: break THE ECLIPSE after wave 10 · LOSE: the Core shatters" line, an INCOMING strip of creature portraits with counts, at most two fading log lines, the colour selector and the build as icons. Key caps show on wave 1, the title and pause. When wave 10 begins, the fight pauses for THE ECLIPSE's entrance: its moon face rises to fill the screen and is named with its first phase. Score popups stack so they never cover each other, and every kill flashes a bright ring in the Shade's colour.
 
 Every colour also has its own shape (a rune on each creature's cloak, on beam tips, the reticle and the HUD), so the game can be played without telling red from green. The creatures, the Warden, the moon faces of THE ECLIPSE and the floor are painted in code by our own `tools/art/paint-art.js` and baked by `tools/bake-art.mjs` into `game/art/atlas.png` (a fixed 128 px grid) and `game/art/floor.jpg`. Everything else (beams with ink outlines and white-hot cores, brass mirrors, the orrery, scorch marks, the cream-and-brass HUD) is drawn live with Canvas 2D. All sound is synthesized with WebAudio (beam hum, hits, kills, wrong colour, Core cracks, waves, cards, boss phases, victory, defeat, plus a quiet generative music loop). Nothing is loaded from the network.
 
@@ -44,17 +45,17 @@ The game is plain static files in `game/`: ES modules, no build step and no thir
 | `game/js/beam.js` | reflection (`reflectDirection`), the Prism split (`castPrismBeams`, `splitAngle`), ray tracing, hits |
 | `game/js/arena.js` | mirror shard layouts, bounds, collision push-out |
 | `game/js/shades.js` | the colour rule (`lightHarmsShade`), Shade creation and movement |
-| `game/js/waves.js` | the run's goal (`waveGoalText`), spawn director (scaled by difficulty), INCOMING counts |
+| `game/js/waves.js` | the spawn director (scaled by difficulty), boss arrival, INCOMING counts |
 | `game/js/boss.js` | THE ECLIPSE: phase breaks (`nextEclipsePhase`), orbit, legions and the Shadow Ring |
 | `game/js/upgrades.js` | upgrade cards and the Ember Pact, dealing, effects, named synergies, derived stats |
 | `game/js/particles.js` | pooled particles, chain arcs and floating score text |
 | `game/js/sprites.js` | loads the baked art (`game/art/atlas.png`, `game/art/floor.jpg`) and draws creatures and characters from it |
 | `game/js/render.js` | the arena scene: brass mirrors, the orrery Core and dais runes, creature Shades, THE ECLIPSE, beams, the Warden |
-| `game/js/hud.js` | Core and stakes, wave goal and progress, score and combo, INCOMING list, rule strip, colour selector, named build, event log, hints |
-| `game/js/screens.js` | title, upgrade cards with THE ECLIPSE preview, results, pause |
+| `game/js/hud.js` | the calm HUD: top bar, WIN/LOSE line, boss bar, INCOMING strip, two log lines, colour selector, build icons, hints, key caps |
+| `game/js/screens.js` | title with roster and Bestiary, upgrade cards with THE ECLIPSE preview, THE ECLIPSE's entrance, results, pause |
 | `game/js/icons.js` | colour shapes and upgrade icons |
 | `game/js/audio.js` | WebAudio sound effects and generative music |
-| `game/js/storage.js` | best score per difficulty, feats, last three runs, mute setting |
+| `game/js/storage.js` | best score per difficulty, feats, mute setting |
 | `game/js/autopilot.js` | a built-in pilot for the screenshot scenes and playtests |
 | `game/js/shots.js` | screenshot scenes (`?shot=title\|play\|upgrade\|results\|defeat`, `play` replaying a seed to a given step) |
 

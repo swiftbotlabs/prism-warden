@@ -16,28 +16,20 @@ const mode = process.argv[2] ?? 'boss';
 const runs = Number(process.argv[3] ?? 300);
 const REACTION = 0.3;
 
-/** The screen areas the HUD covers this frame ({x, y, w, h}), so screenshots can keep Shades out from under panels. */
+/** The screen areas the calm HUD covers (matching game/js/hud.js), so the cover keeps Shades out from under panels. */
 function hudPanelRects(world) {
   const rects = [
-    { x: 16, y: 14, w: 320, h: 90 },
-    { x: ARENA_W / 2 - 180, y: 14, w: 360, h: 90 },
-    { x: ARENA_W / 2 - 290, y: 108, w: 580, h: 36 },
-    { x: ARENA_W - 316, y: 14, w: 300, h: 80 },
-    { x: ARENA_W / 2 - 220, y: ARENA_H - 107, w: 440, h: 30 },
+    { x: 16, y: 10, w: ARENA_W - 32, h: 56 },
+    { x: ARENA_W / 2 - 250, y: 72, w: 500, h: 28 },
     { x: ARENA_W / 2 - 238, y: ARENA_H - 62, w: 476, h: 46 },
-    { x: ARENA_W - 392, y: ARENA_H - 74, w: 376, h: 66 },
   ];
-  if (world.log.some((entry) => world.time - entry.time < 5)) rects.push({ x: 16, y: 112, w: 330, h: 90 });
-  if (world.director && world.state === 'fight') {
-    const rows = Math.max(1, Math.min(6, incomingByKind(world).length));
-    rects.push({ x: ARENA_W - 252, y: 102, w: 236, h: 40 + rows * 28 });
-  }
+  if (world.log.some((entry) => world.time - entry.time < 3.5)) rects.push({ x: 16, y: 72, w: 260, h: 58 });
+  const kinds = world.director && world.state === 'fight' ? Math.min(5, incomingByKind(world).length) : 0;
+  if (kinds) rects.push({ x: ARENA_W - 28 - kinds * 66, y: 72, w: kinds * 66 + 12, h: 42 });
   const owned = UPGRADES.filter((upgrade) => world.upgrades[upgrade.id] > 0).length;
-  if (owned > 0) {
-    const rows = Math.ceil(owned / 3);
-    rects.push({ x: 16, y: ARENA_H - 46 - (rows - 1) * 34 - 22, w: 3 * 122, h: (rows - 1) * 34 + 52 });
-  }
-  if (world.boss && !world.boss.dead) rects.push({ x: ARENA_W / 2 - 250, y: 150, w: 500, h: 46 });
+  if (owned) rects.push({ x: 16, y: ARENA_H - 56, w: owned * 46, h: 42 });
+  if (world.boss && !world.boss.dead) rects.push({ x: ARENA_W / 2 - 210, y: 104, w: 420, h: 40 });
+  if (world.wave === 1) rects.push({ x: ARENA_W - 392, y: ARENA_H - 74, w: 376, h: 66 });
   return rects;
 }
 
@@ -139,20 +131,39 @@ function waveDrama(world) {
 /** A teaching frame: the Prism split sends all three colours, each beam harming a creature of its own colour, and one
  * beam glancing off a creature of another colour (the game tags it WRONG COLOUR). `--loose` lets one beam be the glancing one. */
 const LOOSE = process.argv.includes('--loose');
+/** A beam's total length and its first leg. */
+function beamLength(beam) {
+  let total = 0;
+  let first = 0;
+  for (let i = 2; i < beam.points.length; i += 2) {
+    const leg = Math.hypot(beam.points[i] - beam.points[i - 2], beam.points[i + 1] - beam.points[i - 1]);
+    if (i === 2) first = leg;
+    total += leg;
+  }
+  return { total, first };
+}
 function teachDrama(world) {
-  if (world.state !== 'fight' || world.banner || world.beams.length < 3) return -1;
+  if (world.state !== 'fight' || world.banner || world.cinematic || world.beams.length < 3) return -1;
   const own = (beam) => beam.hits.some((hit) => !hit.shade.dead && harmingColour(hit.shade, hit.part) === beam.colour);
   const glancing = (beam) => beam.hits.some((hit) => !hit.shade.dead && !lightHarmsShade(hit.shade, hit.part, beam.colour));
   const owners = world.beams.filter(own).length;
   if (owners < (LOOSE ? 2 : 3)) return reject('beams not each hitting their own colour');
   if (!world.beams.some(glancing)) return reject('no beam glancing off another colour');
-  const creatures = world.shades.filter((s) => !s.dead && s.kind !== 'umbra' && s.age > 0.35 && s.x > 25 && s.x < ARENA_W - 25 && s.y > 25 && s.y < ARENA_H - 25);
-  if (creatures.length < 6) return reject('fewer than 6 creatures');
+  const w = world.warden;
+  if (Math.hypot(w.x - CORE_X, w.y - CORE_Y) > 200) return reject('Warden not near the Core');
+  const lengths = world.beams.map((beam) => beamLength(beam));
+  if (lengths[0].first < 140 || lengths.slice(1).some((l) => l.total < 180)) return reject('beams too short to read');
+  if (world.beams.some((beam) => !beam.hits.some((hit) => harmingColour(hit.shade, hit.part) === beam.colour && Math.hypot(hit.x - w.x, hit.y - w.y) > 120))) return reject('targets too close to the Warden');
+  const onScreen = world.shades.filter((s) => !s.dead && s.x > 0 && s.x < ARENA_W && s.y > 0 && s.y < ARENA_H);
+  const creatures = onScreen.filter((s) => s.kind !== 'umbra' && s.age > 0.35 && s.x > 25 && s.x < ARENA_W - 25 && s.y > 25 && s.y < ARENA_H - 25);
+  if (creatures.length < 4 || creatures.length > 8 || onScreen.length > 9) return reject('not 4-8 creatures on screen');
   if (world.core.hp < world.core.maxHp * 0.6) return reject('Core below 60%');
   if (!framedClear(world)) return reject('something under the HUD');
-  const boss = world.boss && !world.boss.dead ? 12 : 0;
-  return Math.min(creatures.length, 14) * 2 + new Set(creatures.map((s) => s.kind)).size * 3 + owners * 5 + boss
-    + Math.min(comboMultiplier(world), 6) * 2 + (world.core.hp / world.core.maxHp) * 6;
+  const popups = floatersNear(CORE_X, CORE_Y, 2000);
+  const logLines = world.log.filter((entry) => world.time - entry.time < 3.5).length;
+  const big = creatures.filter((s) => s.r >= 16).length;
+  return big * 3 + creatures.length + owners * 5 + Math.min(comboMultiplier(world), 6) * 2 + (world.core.hp / world.core.maxHp) * 6
+    - popups * 3 - Math.min(logLines, 2) * 2 + (200 - Math.hypot(w.x - CORE_X, w.y - CORE_Y)) / 20;
 }
 
 const drama = mode === 'boss' ? bossDrama : mode === 'teach' ? teachDrama : waveDrama;

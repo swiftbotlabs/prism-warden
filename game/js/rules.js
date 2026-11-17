@@ -1,4 +1,6 @@
-// The rules of Prism Warden as data: how a run is won and lost, the ten waves, the boss, the Shades, synergies, difficulties, feats.
+// PRISM WARDEN: a top-down light-bending defence game. You are the Warden; a Prism splits your beam into three colours, mirrors bend it.
+// A run: ten waves of colour-coded Shades march on the Core, only light of their own colour burns them; wave 10 is THE ECLIPSE.
+// The rules as data: how a run is won and lost, the ten waves, the boss, the Shades, synergies, difficulties, feats.
 import { AZURE, EMBER, TOTAL_WAVES, VERDANT } from './config.js';
 
 /** Win: break THE ECLIPSE on the last wave. */

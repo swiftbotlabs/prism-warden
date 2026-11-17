@@ -1,10 +1,10 @@
-// Screenshot scenes behind ?shot=title|play|upgrade|results|defeat: the real game played by the autopilot, frozen on the moment.
+// Screenshot scenes behind ?shot=title|play|entrance|upgrade|results|defeat: the real game played by the autopilot, frozen on the moment.
 import { STEP } from './config.js';
 import { autopilotControls, autopilotPick, createPilot } from './autopilot.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
 import { applyUpgrade, dealUpgradeCards } from './upgrades.js';
 import { clearEffects, updateEffects } from './particles.js';
-import { loadRuns, saveBestScore, saveFeats, saveRun } from './storage.js';
+import { saveBestScore, saveFeats } from './storage.js';
 import { simRandom } from './random.js';
 import { updateTitleScene } from './screens.js';
 
@@ -13,8 +13,7 @@ const SHOT_PICKS = ['prism', 'reflect', 'lens', 'focus', 'chain', 'bastion', 'la
 const MAX_SECONDS = 60 * 12;
 /** The best score on record in every scene, so the four screenshots tell one story (the winning run beats it). */
 const RECORDED_BEST = 28410;
-/** That profile's earlier runs (oldest first) and the feats its winning run earned. */
-const RECORDED_RUNS = [{ score: 9870, wave: 6, won: false, mode: 'standard' }, { score: RECORDED_BEST, wave: 10, won: true, mode: 'standard' }];
+/** The feats that profile's winning run earned. */
 const RECORDED_FEATS = ['Eclipse Breaker', 'Half-Hundred Combo', 'Named Build'];
 
 /** Plays a run with the autopilot until `stop(world, step)`, taking upgrades between waves on a difficulty. */
@@ -53,7 +52,6 @@ function playIdleUntilLost(seed) {
 export function runShotScene(game, kind, seed, hooks) {
   const params = new URLSearchParams(window.location.search);
   saveBestScore(RECORDED_BEST);
-  if (loadRuns().length === 0) RECORDED_RUNS.forEach(saveRun);
   saveFeats(RECORDED_FEATS);
   hooks.loadProfile();
   let world = null;
@@ -69,7 +67,13 @@ export function runShotScene(game, kind, seed, hooks) {
   for (let attempt = 0; attempt < 6 && !world && kind !== 'play'; attempt += 1) {
     const runSeed = seed + attempt * 101;
     clearEffects();
-    if (kind === 'upgrade') {
+    if (kind === 'entrance') {
+      world = playUntil(runSeed, (w) => w.cinematic && w.cinematic.time > 1.15);
+      if (world) {
+        game.world = world;
+        hooks.setMode('play');
+      }
+    } else if (kind === 'upgrade') {
       world = playUntil(runSeed, (w) => w.wave === 9 && w.state === 'cleared' && w.stateTime > 1.3);
       if (world) {
         game.world = world;

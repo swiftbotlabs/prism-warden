@@ -89,6 +89,9 @@ export function updateEclipse(world, boss, dt) {
 /** Seconds the Shadow Ring is telegraphed (the boss darkens and its halo tightens) before it is released. */
 export const CHARGE_TIME = 1.5;
 
+/** Seconds of THE ECLIPSE's entrance: the fight pauses while it rises, fills the screen and is named. */
+export const ENTRANCE_TIME = 2.4;
+
 /** A legion of minions from the arena edges, spread round the field, their colours rotating through all three lights. */
 function summonLegion(world, kinds) {
   const offset = Math.floor(simRandom() * 3);

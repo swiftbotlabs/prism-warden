@@ -1,10 +1,10 @@
-// The in-play HUD that teaches at a glance: Core and stakes, WIN/LOSE, wave goal, score, INCOMING, colour rule, build, event log.
+// The in-play HUD, kept calm: one slim top bar with big numbers, the WIN/LOSE line, an INCOMING strip, two log lines, colours, build icons.
 import { ARENA_H, ARENA_W, COMBO_TUNING, FONT, LIGHTS, PALETTE, TOTAL_WAVES } from './config.js';
 import { drawLightGlyph, drawUpgradeIcon, traceShape } from './icons.js';
 import { drawCreature } from './sprites.js';
-import { upgradeLabel, UPGRADES } from './upgrades.js';
-import { incomingByKind, waveGoalText, waveProgress } from './waves.js';
-import { LOSE_RULE, SHADE_KINDS, WAVE_TABLE, WIN_RULE } from './rules.js';
+import { UPGRADES } from './upgrades.js';
+import { incomingByKind, waveProgress } from './waves.js';
+import { LOSE_RULE, WAVE_TABLE, WIN_RULE } from './rules.js';
 import { comboMultiplier } from './world.js';
 import { eclipseTitle } from './boss.js';
 
@@ -44,69 +44,94 @@ function bar(ctx, x, y, w, h, ratio, colour, back = 'rgba(42,26,18,0.16)') {
   ctx.fill();
 }
 
-/** Everything drawn over the arena during a wave; the panels hug the edges so the middle stays clear. */
+/** Everything drawn over the arena during a wave: big numbers, few labels, the middle left clear. */
 export function drawHud(ctx, world, best, time, muted) {
-  drawCorePanel(ctx, world, time);
+  drawTopBar(ctx, world, best, time);
+  drawWinLoseLine(ctx, ARENA_W / 2, 86, 14, true);
+  drawBossBar(ctx, world);
+  drawIncomingStrip(ctx, world);
   drawEventLog(ctx, world);
-  drawWavePanel(ctx, world);
-  drawScorePanel(ctx, world, best);
-  drawIncomingPanel(ctx, world);
-  drawRuleStrip(ctx);
   drawColourSelector(ctx, world.warden.colour, time);
-  drawBuildTray(ctx, world.upgrades);
+  drawBuildIcons(ctx, world.upgrades, 16, ARENA_H - 56);
   drawHint(ctx, world);
-  drawKeyCaps(ctx, muted);
-  if (world.banner) drawWaveBanner(ctx, world.banner);
+  if (world.wave === 1) drawKeyCaps(ctx, muted);
+  if (world.banner && !world.cinematic) drawWaveBanner(ctx, world.banner);
 }
 
-/** CORE n / max, its bar, shields, and the stakes: at 0 the run is lost. */
-function drawCorePanel(ctx, world, time) {
+/** One slim bar across the top: Core health (0 = run lost), wave and its progress, score and multiplier. */
+function drawTopBar(ctx, world, best, time) {
   const core = world.core;
   const ratio = core.hp / core.maxHp;
-  drawPanel(ctx, 16, 14, 320, 90);
+  drawPanel(ctx, 16, 10, ARENA_W - 32, 56, 14);
   ctx.beginPath();
-  traceShape(ctx, 'diamond', 40, 40, 12);
+  traceShape(ctx, 'diamond', 40, 38, 12);
   ctx.fillStyle = ratio < 0.34 && Math.sin(time * 8) > 0 ? PALETTE.danger : '#7fbfff';
   ctx.fill();
   ctx.lineWidth = 2;
   ctx.strokeStyle = PALETTE.ink;
   ctx.stroke();
-  text(ctx, 'CORE', 62, 33, 18, PALETTE.ink);
-  text(ctx, `${Math.ceil(core.hp)} / ${core.maxHp}`, 320, 33, 22, PALETTE.ink, 'right');
-  const colour = ratio > 0.6 ? '#3a9ad8' : ratio > 0.33 ? '#d8952a' : PALETTE.danger;
-  bar(ctx, 30, 50, 290, 16, ratio, colour);
-  if (core.shield > 0) {
-    text(ctx, 'SHIELD', 30, 86, 14, '#2a7fc0', 'left', 800);
-    for (let i = 0; i < core.shield; i += 1) {
-      ctx.beginPath();
-      ctx.arc(94 + i * 15, 86, 5, 0, Math.PI * 2);
-      ctx.fillStyle = '#2a7fc0';
-      ctx.fill();
-    }
+  text(ctx, `${Math.ceil(core.hp)}/${core.maxHp}${core.shield ? ' +' + core.shield : ''}`, 60, 30, 26, PALETTE.ink, 'left', 900);
+  bar(ctx, 60, 47, 150, 9, ratio, ratio > 0.6 ? '#3a9ad8' : ratio > 0.33 ? '#d8952a' : PALETTE.danger);
+  text(ctx, '0 = RUN LOST', 220, 51, 13, PALETTE.danger, 'left', 900);
+  const cx = ARENA_W / 2;
+  text(ctx, `WAVE ${world.wave}/${TOTAL_WAVES}`, cx, 30, 26, PALETTE.ink, 'center', 900);
+  bar(ctx, cx - 110, 50, 220, 6, waveProgress(world), PALETTE.gold);
+  const right = ARENA_W - 32;
+  if (world.combo > 0) {
+    text(ctx, `x${comboMultiplier(world)}`, right, 38, 32, PALETTE.gold, 'right', 900);
+    bar(ctx, right - 50, 56, 50, 4, world.comboTimer / COMBO_TUNING.window, PALETTE.gold, 'rgba(0,0,0,0)');
   }
-  text(ctx, '0 = RUN LOST', 320, 86, 16, PALETTE.danger, 'right', 900);
+  text(ctx, world.score.toLocaleString('en-US'), right - 64, 32, 28, PALETTE.ink, 'right', 900);
+  text(ctx, `BEST ${Math.max(best, world.score).toLocaleString('en-US')}`, right - 64, 53, 12, PALETTE.dim, 'right', 800);
 }
 
-/** WAVE n / 10, its name and progress, and the goal: how many waves to hold before THE ECLIPSE. */
-function drawWavePanel(ctx, world) {
-  const cx = ARENA_W / 2;
-  drawPanel(ctx, cx - 180, 14, 360, 90);
-  const plan = WAVE_TABLE[world.wave - 1];
-  text(ctx, `WAVE ${world.wave} / ${TOTAL_WAVES}`, cx, 34, 26, PALETTE.ink, 'center');
-  text(ctx, plan.title.toUpperCase(), cx, 56, 14, PALETTE.dim, 'center', 700);
-  bar(ctx, cx - 155, 65, 310, 6, waveProgress(world), PALETTE.gold);
-  text(ctx, waveGoalText(world.wave), cx, 87, 16, PALETTE.gold, 'center', 900);
-  drawWinLoseLine(ctx, cx, 126, 17, true);
+/** THE ECLIPSE's name, phase and three phase bars, under the top bar while it fights. */
+function drawBossBar(ctx, world) {
   const boss = world.boss;
-  if (boss && !boss.dead) {
-    drawPanel(ctx, cx - 250, 150, 500, 46, 10, PALETTE.panel, LIGHTS[boss.colour].hex);
-    text(ctx, eclipseTitle(boss), cx, 164, 14, PALETTE.ink, 'center');
-    for (let i = 0; i < 3; i += 1) {
-      const x = cx - 234 + i * 158;
-      const ratio = i < boss.phase ? 0 : i > boss.phase ? 1 : boss.hp / boss.maxHp;
-      bar(ctx, x, 178, 152, 10, ratio, i === boss.phase ? LIGHTS[boss.colour].hex : 'rgba(42,26,18,0.45)');
-    }
+  if (!boss || boss.dead) return;
+  const cx = ARENA_W / 2;
+  drawPanel(ctx, cx - 210, 104, 420, 40, 10, PALETTE.panel, LIGHTS[boss.colour].hex);
+  text(ctx, eclipseTitle(boss), cx, 116, 13, PALETTE.ink, 'center', 900);
+  for (let i = 0; i < 3; i += 1) {
+    const ratio = i < boss.phase ? 0 : i > boss.phase ? 1 : boss.hp / boss.maxHp;
+    bar(ctx, cx - 196 + i * 132, 128, 126, 9, ratio, i === boss.phase ? LIGHTS[boss.colour].hex : 'rgba(42,26,18,0.45)');
   }
+}
+
+/** INCOMING: a strip of creature portraits with how many of each this wave still sends. */
+function drawIncomingStrip(ctx, world) {
+  if (!world.director || world.state !== 'fight') return;
+  const rows = incomingByKind(world).slice(0, 5);
+  if (rows.length === 0) return;
+  const width = rows.length * 66 + 12;
+  const x = ARENA_W - 16 - width;
+  drawPanel(ctx, x, 72, width, 42, 12);
+  rows.forEach((row, i) => {
+    const colours = [...row.colours].filter((c) => c !== 3);
+    drawCreature(ctx, row.kind, colours[0] ?? 3, x + 26 + i * 66, 93, row.kind === 'eclipse' ? 30 : 38);
+    text(ctx, `x${row.count}`, x + 44 + i * 66, 95, 16, PALETTE.ink, 'left', 900);
+  });
+}
+
+/** At most two short log lines, newest at the bottom, fading out. */
+function drawEventLog(ctx, world) {
+  world.log.filter((entry) => world.time - entry.time < 3.5).slice(-2).forEach((entry, index) => {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, (3.5 - (world.time - entry.time)) / 1.5));
+    const width = textWidth(ctx, entry.text, 15) + 22;
+    drawPanel(ctx, 16, 74 + index * 30, width, 26, 13, PALETTE.inkPanel, PALETTE.panelEdge);
+    text(ctx, entry.text, 27, 88 + index * 30, 15, entry.colour, 'left', 800);
+    ctx.restore();
+  });
+}
+
+/** The owned upgrades as a row of icon cards with their level; names appear on the pause screen. */
+export function drawBuildIcons(ctx, levels, x, y) {
+  UPGRADES.filter((upgrade) => levels[upgrade.id] > 0).forEach((upgrade, i) => {
+    drawPanel(ctx, x + i * 46, y, 42, 42, 9, PALETTE.inkPanel, PALETTE.panelEdge);
+    drawUpgradeIcon(ctx, upgrade.id, x + i * 46 + 21, y + 19, 30);
+    text(ctx, ['I', 'II', 'III', 'IV'][levels[upgrade.id] - 1], x + i * 46 + 36, y + 35, 11, '#ffcf7a', 'right', 900);
+  });
 }
 
 /** Width of the WIN / LOSE line at `size` (with an optional lead-in), for layout. */
@@ -131,101 +156,6 @@ export function drawWinLoseLine(ctx, cx, y, size, onPill = false, prefix = '') {
   part(LOSE_RULE, PALETTE.ink, 700);
 }
 
-function drawScorePanel(ctx, world, best) {
-  const right = ARENA_W - 16;
-  drawPanel(ctx, right - 300, 14, 300, 70);
-  text(ctx, 'SCORE', right - 284, 32, 14, PALETTE.dim);
-  text(ctx, world.score.toLocaleString('en-US'), right - 284, 59, 30, PALETTE.ink);
-  text(ctx, `BEST ${Math.max(best, world.score).toLocaleString('en-US')}`, right - 16, 32, 14, PALETTE.dim, 'right', 700);
-  if (world.combo > 0) {
-    const multiplier = comboMultiplier(world);
-    text(ctx, `x${multiplier}`, right - 16, 60, 30, PALETTE.gold, 'right', 900);
-    text(ctx, `${world.combo} COMBO`, right - 74 - (multiplier > 9 ? 18 : 0), 61, 15, PALETTE.dim, 'right', 800);
-    bar(ctx, right - 300, 88, 300, 5, world.comboTimer / COMBO_TUNING.window, PALETTE.gold, 'rgba(0,0,0,0)');
-  }
-}
-
-/** INCOMING: each Shade kind this wave still has to send, with its picture, the colours it comes in and how many. */
-function drawIncomingPanel(ctx, world) {
-  if (!world.director || world.state !== 'fight') return;
-  const rows = incomingByKind(world).slice(0, 6);
-  const width = 236;
-  const x = ARENA_W - 16 - width;
-  const y = 102;
-  const height = 40 + Math.max(1, rows.length) * 28;
-  drawPanel(ctx, x, y, width, height, 12);
-  text(ctx, 'INCOMING', x + 14, y + 18, 15, PALETTE.gold, 'left', 900);
-  const onField = world.shades.filter((shade) => !shade.dead).length;
-  text(ctx, `${onField} ON FIELD`, x + width - 14, y + 18, 14, PALETTE.dim, 'right', 700);
-  if (rows.length === 0) {
-    text(ctx, 'all Shades are in · finish them', x + 14, y + 46, 15, PALETTE.dim, 'left', 600);
-    return;
-  }
-  rows.forEach((row, index) => {
-    const ry = y + 46 + index * 28;
-    const colours = row.kind === 'bulwark' ? [0, 1, 2] : [...row.colours].sort();
-    drawCreature(ctx, row.kind, colours[0] === 3 && colours.length > 1 ? colours[1] : colours[0], x + 24, ry, row.kind === 'eclipse' ? 30 : 34);
-    const label = row.kind === 'eclipse' ? 'THE ECLIPSE' : SHADE_KINDS[row.kind].label;
-    text(ctx, `${label} x${row.count}`, x + 46, ry, 17, PALETTE.ink, 'left', 800);
-    if (row.kind !== 'eclipse') colours.forEach((colour, i) => drawLightGlyph(ctx, colour, x + width - 18 - i * 14, ry, 5));
-  });
-}
-
-/** The last few scoring and danger events, newest at the bottom, fading out. */
-function drawEventLog(ctx, world) {
-  const recent = world.log.filter((entry) => world.time - entry.time < 5).slice(-3);
-  recent.forEach((entry, index) => {
-    const age = world.time - entry.time;
-    const alpha = Math.max(0, Math.min(1, (5 - age) / 2));
-    const y = 128 + index * 30;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    const width = textWidth(ctx, entry.text, 16) + 24;
-    drawPanel(ctx, 16, y - 13, width, 26, 13, PALETTE.inkPanel, PALETTE.panelEdge);
-    text(ctx, entry.text, 28, y + 1, 16, entry.colour, 'left', 800);
-    ctx.restore();
-  });
-}
-
-/** The one rule, by the colour bar: each beam colour harms the Shade shell of that colour and shape; white takes any. */
-function drawRuleStrip(ctx) {
-  const lead = 'MATCH COLOUR';
-  const pairWidth = 52;
-  const tail = 'ANY';
-  const width = textWidth(ctx, lead, 15, 900) + pairWidth * 3 + textWidth(ctx, tail, 14, 800) + 70;
-  const x = ARENA_W / 2 - width / 2;
-  const y = ARENA_H - 92;
-  drawPanel(ctx, x, y - 15, width, 30, 15);
-  text(ctx, lead, x + 14, y + 1, 15, PALETTE.ink, 'left', 900);
-  let px = x + 24 + textWidth(ctx, lead, 15, 900);
-  for (let colour = 0; colour < 3; colour += 1) {
-    const light = LIGHTS[colour];
-    ctx.beginPath();
-    ctx.moveTo(px, y);
-    ctx.lineTo(px + 20, y);
-    ctx.strokeStyle = light.hex;
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    ctx.beginPath();
-    traceShape(ctx, light.shape, px + 34, y, 7);
-    ctx.fillStyle = PALETTE.ink;
-    ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = light.hex;
-    ctx.stroke();
-    px += pairWidth;
-  }
-  ctx.beginPath();
-  traceShape(ctx, 'diamond', px + 6, y, 6);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = PALETTE.ink;
-  ctx.stroke();
-  text(ctx, tail, px + 18, y + 1, 14, PALETTE.ink, 'left', 800);
-}
-
 /** The three lights as keyed chips; the selected one glows. */
 export function drawColourSelector(ctx, selected, time) {
   const width = 152;
@@ -248,27 +178,6 @@ export function drawColourSelector(ctx, selected, time) {
     text(ctx, light.key, x + 46, y + 23, 15, active ? PALETTE.ink : PALETTE.faint, 'left', 900);
     text(ctx, light.name.toUpperCase(), x + 62, y + 23, 16, active ? PALETTE.ink : PALETTE.dim, 'left', 800);
   }
-}
-
-/** The owned upgrades as named chips ("Prism II"), three to a row, stacking upward from the bottom-left corner. */
-function drawBuildTray(ctx, levels) {
-  const owned = UPGRADES.filter((upgrade) => levels[upgrade.id] > 0);
-  if (owned.length === 0) return;
-  const chipW = 118;
-  const chipH = 30;
-  const rows = Math.ceil(owned.length / 3);
-  const bottom = ARENA_H - 16 - chipH;
-  const labelY = bottom - (rows - 1) * (chipH + 4) - 14;
-  drawPanel(ctx, 16, labelY - 11, 62, 22, 8);
-  text(ctx, 'BUILD', 25, labelY + 1, 14, PALETTE.ink, 'left', 900);
-  owned.forEach((upgrade, index) => {
-    const x = 16 + (index % 3) * (chipW + 4);
-    const y = bottom - Math.floor(index / 3) * (chipH + 4);
-    drawPanel(ctx, x, y, chipW, chipH, 8);
-    drawPanel(ctx, x + 3, y + 3, 26, chipH - 6, 6, PALETTE.inkPanel, PALETTE.inkPanel);
-    drawUpgradeIcon(ctx, upgrade.id, x + 16, y + chipH / 2, 22);
-    text(ctx, upgradeLabel(upgrade.id, levels[upgrade.id]), x + 32, y + chipH / 2 + 1, 15, PALETTE.ink, 'left', 800);
-  });
 }
 
 function drawHint(ctx, world) {

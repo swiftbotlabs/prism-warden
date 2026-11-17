@@ -5,11 +5,11 @@ import { isMuted, playSound, setBeamHum, setMusicMood, setMuted, unlockAudio } f
 import { drawWorld } from './render.js';
 import { loadArt } from './sprites.js';
 import { drawHud } from './hud.js';
-import { bossIsNext, cardAt, difficultyAt, createTitleScene, drawPause, drawResults, drawTitle, drawUpgradeChoice, updateTitleScene } from './screens.js';
+import { bossIsNext, cardAt, difficultyAt, drawBossEntrance, createTitleScene, drawPause, drawResults, drawTitle, drawUpgradeChoice, updateTitleScene } from './screens.js';
 import { beginWave, createWorld, stepWorld } from './world.js';
 import { applyUpgrade, dealUpgradeCards, upgradeById } from './upgrades.js';
 import { clearEffects, updateEffects } from './particles.js';
-import { loadBestScore, loadFeats, loadMuted, loadRuns, saveBestScore, saveFeats, saveMuted, saveRun } from './storage.js';
+import { loadBestScore, loadFeats, loadMuted, saveBestScore, saveFeats, saveMuted } from './storage.js';
 import { DIFFICULTIES, FEATS } from './rules.js';
 import { simRandom } from './random.js';
 import { runShotScene } from './shots.js';
@@ -30,7 +30,6 @@ const game = {
   bests: {},
   best: 0,
   feats: [],
-  runs: [],
   runFeats: [],
   newBest: false,
   previousBest: 0,
@@ -69,15 +68,14 @@ function setMode(mode) {
   game.modeTime = 0;
 }
 
-/** Reads the saved profile: best score per difficulty, feats, last runs. */
+/** Reads the saved profile: best score per difficulty and feats. */
 function loadProfile() {
   for (const difficulty of DIFFICULTIES) game.bests[difficulty.id] = loadBestScore(difficulty.id);
   game.best = game.bests[game.difficulty];
   game.feats = loadFeats();
-  game.runs = loadRuns();
 }
 
-/** Records a finished run: best for its difficulty, feats earned, the run itself. */
+/** Records a finished run: best for its difficulty and feats earned. */
 function finishRun(world) {
   const mode = world.difficulty;
   game.previousBest = game.bests[mode];
@@ -85,7 +83,6 @@ function finishRun(world) {
   game.bests[mode] = game.best = saveBestScore(world.score, mode);
   game.runFeats = FEATS.filter((feat) => feat.earned(world)).map((feat) => feat.name);
   game.feats = saveFeats(game.runFeats);
-  game.runs = saveRun({ score: world.score, wave: world.wave, won: world.state === 'won', mode });
 }
 
 /** A fresh run from wave 1. */
@@ -136,6 +133,7 @@ function handleScreenInput() {
 
   switch (game.mode) {
     case 'title': {
+      if (presses.includes('KeyB')) game.bestiary = !game.bestiary;
       const step = presses.filter((code) => code === 'ArrowRight').length - presses.filter((code) => code === 'ArrowLeft').length;
       const chip = clicks > 0 ? difficultyAt(input.mouseX, input.mouseY) : -1;
       if (step !== 0 || chip >= 0) {
@@ -292,8 +290,9 @@ export function drawFrame() {
       break;
     default:
       drawWorld(ctx, world, game.time, game.mode === 'play');
-      drawHud(ctx, world, game.best, game.time, isMuted());
-      if (game.mode === 'paused') drawPause(ctx, isMuted());
+      if (world.cinematic) drawBossEntrance(ctx, world.cinematic.time);
+      else drawHud(ctx, world, game.best, game.time, isMuted());
+      if (game.mode === 'paused') drawPause(ctx, isMuted(), world);
       break;
   }
   ctx.restore();

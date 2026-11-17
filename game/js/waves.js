@@ -6,14 +6,6 @@ import { createEclipse } from './boss.js';
 import { layoutMirrors } from './arena.js';
 import { simRandom, simShuffle } from './random.js';
 
-
-
-/** The run's goal as the HUD states it: hold the waves, then break THE ECLIPSE on the last one to win. */
-export function waveGoalText(wave) {
-  const left = TOTAL_WAVES - wave;
-  return left > 0 ? `${left} WAVE${left > 1 ? 'S' : ''} TO THE ECLIPSE` : 'BREAK THE ECLIPSE';
-}
-
 /** A wave is cleared when nothing is left to spawn and no Shade (or boss) remains. */
 export function isWaveCleared(world) {
   const director = world.director;
@@ -74,6 +66,8 @@ export function updateDirector(world, dt) {
     if (director.bossDue <= 0) {
       world.boss = createEclipse();
       world.shades.push(world.boss);
+      world.cinematic = { time: 0 };
+      world.beams = [];
       world.events.push({ type: 'boss' });
     }
   }

@@ -1,22 +1,22 @@
 [
   {
     "name": "1-play.jpg",
-    "query": "?shot=play&seed=81918&step=7932&reaction=0.3&focus=1",
-    "shows": "An unmodified, seeded frame of normal play on wave 6 in the Lantern Observatory. The Prism split sends Ember, Verdant and Azure beams bouncing off brass mirrors, each harming a creature of its own colour, while two beams glance off creatures of another colour and the game tags them '\u00d7 WRONG COLOUR', so the still frame teaches the rule. 14 creatures are in view (hooded imps, Bulwarks with three-colour shells, a Prismling, a soot-moth). Combo x6, Core 12/12, and the cream-and-brass HUD (WIN/LOSE line, '0 = RUN LOST', wave goal, INCOMING, event log, MATCH COLOUR, build cards, key caps). Chosen by tools/find-cover.mjs (teach mode) from 1,200 autopilot runs."
+    "query": "?shot=play&seed=130499&step=16557&reaction=0.3&focus=1",
+    "shows": "One focal point, from unmodified seeded normal play (wave 10). The robed Warden stands at the brass orrery Core, and the Prism splits the beam into Ember, Azure and Verdant branches that bounce off brass mirrors and walls. Each branch burns a creature of its own colour, and one glances off a creature of another colour, tagged '\u00d7 WRONG COLOUR'. THE ECLIPSE screams beside them under its Azure crown, with about 7 creatures on screen. The calm HUD shows one top bar (Core 11/12 with '0 = RUN LOST', WAVE 10/10, score 25,635 with x8), the WIN/LOSE line, the boss bar and an INCOMING portrait strip. Chosen by tools/find-cover.mjs (teach mode) from 1,500 runs."
   },
   {
     "name": "2-title.jpg",
     "query": "?shot=title&seed=7",
-    "shows": "The title over the Lantern Observatory: logo, OBJECTIVE (WIN/LOSE), '10 waves \u00b7 7 kinds of Shade \u00b7 10 upgrades \u00b7 a three-phase boss', a roster of THE SHADES with a portrait and one behaviour line each, the rules of light, the difficulty choice GENTLE / STANDARD (best 28,410) / ECLIPSE+, 'CLICK TO BEGIN', FEATS 3/8 and key caps for every control."
+    "shows": "The title: the big PRISM WARDEN logo, 'Bend light. Hold the core.', the OBJECTIVE (WIN/LOSE), the Warden at the orrery with creatures around him, the roster of Shades as portraits with names (B opens the Bestiary), MATCH COLOUR as pictures (each beam colour beside the creature it burns), the GENTLE / STANDARD / ECLIPSE+ chips with best per mode, CLICK TO BEGIN, FEATS 3/8 and key caps."
   },
   {
-    "name": "3-upgrade.jpg",
-    "query": "?shot=upgrade&seed=7",
-    "shows": "WAVE 9 CLEARED: 'NEXT: THE ECLIPSE' with its calm moon face and three phases, then three cards: Swift (completes QUICKSILVER), Reflect (strengthens KALEIDOSCOPE) and the Ember Pact trade-off (+25% beam damage, PRICE: -4 Core max HP; completes BLOOD MOON). YOUR BUILD is named KALEIDOSCOPE + STARFALL + BURNING GLASS."
+    "name": "3-boss.jpg",
+    "query": "?shot=entrance&seed=7",
+    "shows": "THE ECLIPSE's entrance at the start of wave 10, in normal play: the fight pauses, the view darkens and its calm moon face rises under an Ember corona crown to fill the screen, named 'THE ECLIPSE' on a plate reading 'PHASE I \u00b7 UMBRA'."
   },
   {
     "name": "4-results.jpg",
     "query": "?shot=results&seed=7",
-    "shows": "VICTORY with THE ECLIPSE's cracked moon face: a score-per-wave chart, the last three runs, the stats, score 40,035 as NEW BEST over 28,410, the feats earned (4/8), the next goal (Win on ECLIPSE+), the build named by its synergies, and 'Press R or click to play again'."
+    "shows": "VICTORY over the cracked moon face: score 40,035 as NEW BEST (was 28,410), four stats, a score-per-wave chart, the feats earned (4/8), the build as icons with its synergy names (KALEIDOSCOPE + STARFALL + BURNING GLASS) and 'Press R or click to play again'."
   }
 ]
